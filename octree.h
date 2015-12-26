@@ -2,6 +2,7 @@
 #define OCTREE_H
 
 #include "hlm.h"
+#include <vector>
 
 struct Point{
     hlm::vec3 pos, norm, col;
@@ -14,43 +15,46 @@ typedef Point DataType;
 
 struct OctNode{
     hlm::vec3 center;
-    OctNode* children;
+    std::vector<OctNode> children;
     DataType* data;
     float half_len;
     OctNode(const hlm::vec3& _center, float _half_len)
-    : center(_center), children(nullptr), data(nullptr), half_len(_half_len){};
-    ~OctNode(){ delete data; free(children); };
-    inline char getChildIdx(hlm::vec3& location){
-        char i = 0;
+    : center(_center), data(nullptr), half_len(_half_len){};
+    ~OctNode(){ delete data; };
+    inline unsigned char getChildIdx(hlm::vec3& location){
+        unsigned char i = 0;
         i |= location.x >= center.x ? 4 : 0;
         i |= location.y >= center.y ? 2 : 0;
         i |= location.z >= center.z ? 1 : 0;
         return i;
     }
     inline void makeChildren(){
-        children = (OctNode*)malloc(sizeof(OctNode) * 8);
+        printf("makeChildren() called\n");
+        children.reserve(8);
         float q_len = half_len * 0.5f;
         for(unsigned char i=0; i<8; i++){
             hlm::vec3 n_c(center);
             n_c.x += i&4 ? q_len : -q_len;
             n_c.y += i&2 ? q_len : -q_len;
             n_c.z += i&1 ? q_len : -q_len;
-            *(children+i) = OctNode(n_c, q_len);
+            children.push_back({n_c, q_len});
         }
     }
-    inline bool isLeaf(){ return !data && !children;}
+    inline bool isLeaf(){ return data == nullptr && children.empty();}
     inline void insert(DataType* d){
         if(isLeaf()){
             data = d;
             return;
         }
-        if(!children)
+        if(children.empty())
             makeChildren();
-        char i = getChildIdx(data->pos);
-        (children+i)->insert(data);
-        data = nullptr;
-        i = getChildIdx(d->pos);
-        (children+i)->insert(d);
+        if(data != nullptr){
+            unsigned char i = getChildIdx(data->pos);
+            children[i].insert(data);
+            data = nullptr;
+        }
+        unsigned char i = getChildIdx(d->pos);
+        children[i].insert(d);
     }
 };
 
