@@ -14,7 +14,7 @@ smooth out vec3 fragColor;
 
 void main(){
 	gl_Position = VP * vec4(position, 1);
-	gl_PointSize = radius / gl_Position.w;
+	gl_PointSize = clamp(radius / gl_Position.w, 1.0f, 100.0f);
 	fragPos = position;
 	fragNormal = normalize(normMat * normal);
 	fragColor = color;

@@ -11,14 +11,14 @@
 using namespace std;
 
 int main(){
-	Window window(800, 600, 3, 3, "Octree Testing");
+	Window window(1600, 900, 3, 3, "Octree Testing");
 	Input input(window.getWindow());
 	GLProgram prog("shader.vert", "shader.frag");
 	Camera camera;
 	
 	prog.bind();
 	prog.setUniform("ambient", {0.1f, 0.1f, 0.1f});
-	prog.setUniform("light_pos", {0.0f, 0.0f, 1.0f});
+	prog.setUniform("light_pos", {10.0f, 10.0f, 10.0f});
 	prog.setUniform("light_color", {1.0f, 1.0f, 1.0f});
 	
 	prog.setUniformFloat("shininess", 16.0f);
@@ -27,20 +27,19 @@ int main(){
     srand(time(NULL));
     OctNode root({0.0f, 0.0f, 0.0f}, 100.0f);
     PointBuffer pb;
-    for(unsigned i = 0; i < 100000; i++){
-        float n[10];
-        for(unsigned j = 0; j < 3; j++){
-            n[j] = (float)(rand()%10000)/5000.0f - 1.0f;
-        }
-        for(unsigned j = 6; j < 9; j++){
-            n[j] = (float)(rand()%1024)/1024.0f + 0.1f;
-        }
-        n[9] = (float)(rand()&1000)/10.0f;
-        Point* pt = new Point({n[0], n[1], n[2]}, {0.0f, 0.0f, -1.0f}, {n[6],n[7],n[8]}, n[9]);
-        pb.push_back(*pt);
-        root.insert(pt);
-    }
+    float r = 2.0f;
+	for(float j = 0.0f; j < 3.14f; j += 0.001f){
+		float y = r * cos(j);
+		for(float k = 0.0f; k < 6.28f; k+= 0.002f){
+			float x = r * sin(j) * sin(k);
+			float z = r * sin(j) * cos(k);
+		    glm::vec3 pos(x, y, z);
+		    glm::vec3 normal = -1.0f * glm::normalize(pos);
+		    pb.push_back(Point(pos, normal, {1.0f, 1.0f, 1.0f}, 10.0f));
+		    //root.insert(pt);
+    }}
     glEnable(GL_PROGRAM_POINT_SIZE);
+    glEnable(GL_DEPTH_TEST);
     //root.print(0);
 	PointMesh pointMesh;
 	pointMesh.upload(pb);

@@ -17,21 +17,27 @@ inline glm::vec3 getForward(const glm::mat4& m){
 	return glm::vec3(-m[0][2], -m[1][2], -m[2][2]);
 }
 
+
 class Camera{
 	glm::mat4 P, V, IVP;
-	glm::vec3 m_eye, m_forward;
-	float m_fov, m_whratio, m_near, m_far;
+	glm::vec3 m_eye, m_at;
+	float m_fov, m_whratio, m_near, m_far, m_yaw, m_pitch;
 public:
     Camera(float fov=45.0f, float ratio=16.0f/9.0f, float near=0.1f, 
     	float far=100.0f, const glm::vec3& eye=glm::vec3(0.0f), 
     	const glm::vec3& at=glm::vec3(0.0f, 0.0f, -1.0f)) 
-    	: m_eye(eye), m_fov(fov), m_whratio(ratio), m_near(near), m_far(far){
-		m_forward = glm::normalize(at - eye);
+    	: m_eye(eye), m_at(at), m_fov(fov), m_whratio(ratio), m_near(near), m_far(far){
 		P = glm::perspective(m_fov, m_whratio, m_near, m_far);
+		m_yaw = 0.0f;
+		m_pitch = 0.0f;
 		update();
 	}
 	inline void update(){
-		V = glm::lookAt(m_eye, m_forward, up_vec);
+		m_at.x = cos(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
+		m_at.y = sin(glm::radians(m_pitch));
+		m_at.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
+		m_at += m_eye;
+		V = glm::lookAt(m_eye, m_at, up_vec);
 		//IVP = glm::inverse(P * V);
 	}
 	inline void setFov(float fov){
@@ -41,7 +47,7 @@ public:
 	inline const glm::vec3& getEye(){return m_eye;}
 	inline float getFov(){return m_fov;}
 	inline void setEye(const glm::vec3& eye){m_eye = eye;}
-	inline void lookAt(const glm::vec3& eye, const glm::vec3& at){m_eye = eye; m_forward = glm::normalize(at - eye);}
+	inline void lookAt(const glm::vec3& eye, const glm::vec3& at){m_eye = eye; m_at = at;}
 	inline glm::vec3 getRay(float x, float y){
 		glm::vec4 temp(x, y, 0.0f, 1.0f);
 		temp = IVP * temp;
@@ -49,13 +55,13 @@ public:
 		return glm::normalize(glm::vec3(temp) - m_eye);
 	}
 	inline void move(const glm::vec3& v){
-		m_eye += v.x * getRight(V) + v.y * up_vec - v.z * m_forward;
+		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
 	}
 	void pitch(float amt){
-		m_forward += amt * up_vec;
+		m_pitch += amt;
 	}
 	void yaw(float amt){
-		m_forward -= amt * getRight(V);
+		m_yaw -= amt;
 	}
 	inline glm::mat4 getVP(){
 		return P * V;
