@@ -1,5 +1,6 @@
 #include "point.h"
 #include "myglheaders.h"
+#include "debugmacro.h"
 #include <algorithm>
 
 PointMesh::PointMesh(){
@@ -16,10 +17,13 @@ PointMesh::PointMesh(){
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float)*3, (void*)(sizeof(float)*6));	// color
 	glEnableVertexAttribArray(3);
 	glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)(sizeof(float)*9));	// radius
+	MYGLERRORMACRO
+	
 }
 PointMesh::~PointMesh(){
 	glDeleteBuffers(1, &vbo);
 	glDeleteVertexArrays(1, &vao);
+	MYGLERRORMACRO
 }
 
 void PointMesh::upload(PointBuffer& points){
@@ -28,10 +32,12 @@ void PointMesh::upload(PointBuffer& points){
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * points.size(), &points[0], GL_STATIC_DRAW);
+	MYGLERRORMACRO
 }
 
 void PointMesh::draw(){
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glDrawArrays(GL_POINTS, 0, num_points);
+	MYGLERRORMACRO
 }

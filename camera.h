@@ -22,7 +22,7 @@ class Camera{
 	glm::vec3 m_eye, m_forward;
 	float m_fov, m_whratio, m_near, m_far;
 public:
-    Camera(float fov=90.0f, float ratio=16.0f/9.0f, float near=1.0f, 
+    Camera(float fov=45.0f, float ratio=16.0f/9.0f, float near=0.1f, 
     	float far=100.0f, const glm::vec3& eye=glm::vec3(0.0f), 
     	const glm::vec3& at=glm::vec3(0.0f, 0.0f, -1.0f)) 
     	: m_eye(eye), m_fov(fov), m_whratio(ratio), m_near(near), m_far(far){
@@ -32,7 +32,7 @@ public:
 	}
 	inline void update(){
 		V = glm::lookAt(m_eye, m_forward, up_vec);
-		IVP = glm::inverse(P * V);
+		//IVP = glm::inverse(P * V);
 	}
 	inline void setFov(float fov){
 		m_fov = fov;
@@ -49,13 +49,17 @@ public:
 		return glm::normalize(glm::vec3(temp) - m_eye);
 	}
 	inline void move(const glm::vec3& v){
-		m_eye += v.x * getRight(V) + v.y * up_vec + v.z * m_forward;
+		m_eye += v.x * getRight(V) + v.y * up_vec - v.z * m_forward;
 	}
 	void pitch(float amt){
 		m_forward += amt * up_vec;
 	}
 	void yaw(float amt){
-		m_forward += amt * getRight(V);
+		m_forward -= amt * getRight(V);
 	}
+	inline glm::mat4 getVP(){
+		return P * V;
+	}
+	inline glm::mat4& getV(){return V;}
 };
 #endif

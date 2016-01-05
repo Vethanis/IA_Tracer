@@ -13,12 +13,12 @@ uniform float shininess;
 out vec4 out_color;
 
 void main(){
-	const vec3 L = normalize(light_pos - fragPos);
-	const vec3 V = normalize(eye - fragPos);
-	const vec3 H = normalize(L + V);
-	const float S = pow(dot(H, N), shininess);
-	const float D = max(0.0, dot(vertexNormal, L));
-	const float dist2 = dot(light_pos - fragPos, light_pos - fragPos);
+	vec3 L = normalize(light_pos - fragPos);
+	vec3 V = normalize(eye - fragPos);
+	vec3 H = normalize(L + V);
+	float S = pow(dot(H, fragNormal), shininess);
+	float D = max(0.0, dot(fragNormal, L));
+	float dist2 = dot(light_pos - fragPos, light_pos - fragPos);
 	vec3 C = ambient + (fragColor * D + fragColor * S * light_color) / dist2;
 	out_color = vec4(C, 1.0);
 }

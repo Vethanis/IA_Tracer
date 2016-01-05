@@ -1,6 +1,7 @@
 #ifndef OCTREE_H
 #define OCTREE_H
 
+#include "debugmacro.h"
 #include "glm/glm.hpp"
 #include <vector>
 #include <algorithm>
@@ -24,7 +25,6 @@ struct OctNode{
         return i;
     }
     inline void makeChildren(){
-        printf("makeChildren() called\n");
         children.reserve(8);
         float q_len = half_len * 0.5f;
         for(unsigned char i=0; i<8; i++){
@@ -51,14 +51,26 @@ struct OctNode{
         unsigned char i = getChildIdx(d->pos);
         children[i].insert(d);
     }
+    inline void print(int depth){
+    	if(isLeaf()) return;
+		for(int i = 0; i < depth; i++)
+			std::cout << " ";
+		std::cout << depth << " : " << center.x << " " << center.y << " " << center.z << " : ";
+    	if(data){
+    		std::cout << data->pos.x << " " << data->pos.y << " " << data->pos.z;
+    	}
+    	std::cout << std::endl;
+    	for(auto& i : children)
+    		i.print(depth + 1);
+    }
 };
 
 
 struct AABB{
     glm::vec3 bounds[2];
-    AABB(OctNode& o){
-        bounds[0] = o.center - o.half_len;
-        bounds[1] = o.center + o.half_len;
+    AABB(OctNode* o){
+        bounds[0] = o->center - o->half_len;
+        bounds[1] = o->center + o->half_len;
     }
 };
 
@@ -91,29 +103,33 @@ struct Ray{
         max.z = inv_dir.z * ( box.bounds[1 - sign[0]].z - origin.z );
         min.x = std::max(min.x, std::max(min.y, min.z));
         max.x = std::min(max.x, std::min(max.y, max.z));
-        return min.x > max.x ? -1.0f : min.x;
+        return (min.x > max.x) ? -1.0f : min.x;
     }
     inline void getHitList(OctNode& node, std::vector<HitResult>& list){
     	list.clear();
-		std::vector<OctNode*> stack(512); // 8^3; expect to go at least 3 deep fully
+		std::vector<OctNode*> stack; 
+		stack.reserve(512); // 8^3; expect to go at least 3 deep fully
 		stack.push_back(&node);
 		while(!stack.empty()){
 			OctNode* cur = stack.back();
 			stack.pop_back();
-			AABB box(*cur);
+			AABB box(cur);
+			PRINTLINEMACRO
 			float t = intersect(box);
 			if(t >= 0.0f){
 				if(cur->data){
 					list.push_back({cur->data, t});
+					PRINTLINEMACRO
 				}
 				else {
 					for(OctNode& i : cur->children){
 						stack.push_back(&i);
+						PRINTLINEMACRO
 					}
 				}
 			}
 		}
-		
+		PRINTLINEMACRO
 		if(list.size() > 8){	// keep only 8 nearest hits
 			std::partial_sort(begin(list), begin(list)+8, end(list));
 			list.erase(begin(list)+8, end(list));
