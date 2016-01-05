@@ -17,8 +17,7 @@ struct Point{
 typedef std::vector<Point> PointBuffer;
 
 struct PointMesh{
-	PointBuffer points;
-	unsigned vao, vbo;
+	unsigned vao, vbo, num_points;
 	PointMesh();
 	~PointMesh();
 	void draw();

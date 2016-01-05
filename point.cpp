@@ -3,6 +3,7 @@
 #include <algorithm>
 
 PointMesh::PointMesh(){
+	num_points = 0;
 	glGenVertexArrays(1, &vao);
 	glGenBuffers(1, &vbo);
 	glBindVertexArray(vao);
@@ -21,8 +22,8 @@ PointMesh::~PointMesh(){
 	glDeleteVertexArrays(1, &vao);
 }
 
-void PointMesh::upload(PointBuffer& buffer){
-	points = buffer;
+void PointMesh::upload(PointBuffer& points){
+	num_points = points.size();
 	std::sort(points.begin(), points.end());
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -32,5 +33,5 @@ void PointMesh::upload(PointBuffer& buffer){
 void PointMesh::draw(){
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glDrawArrays(GL_POINTS, 0, points.size());
+	glDrawArrays(GL_POINTS, 0, num_points);
 }

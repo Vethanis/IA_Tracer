@@ -62,11 +62,20 @@ struct AABB{
     }
 };
 
+struct HitResult{
+	Point* pt;
+	float t;
+	HitResult(Point* p, float _t) : pt(p), t(_t){};
+	bool operator < (const HitResult& other){
+		return t < other.t;
+	}
+};
+
 
 struct Ray{
     glm::vec3 origin, direction, inv_dir;
     unsigned char sign[3];
-    Ray(glm::vec3& o, glm::vec3& d) : origin(o), direction(d) {
+    Ray(const glm::vec3& o, const glm::vec3& d) : origin(o), direction(d) {
         inv_dir = 1.0f / d;
         sign[0] = inv_dir.x < 0 ? 1 : 0;
         sign[1] = inv_dir.y < 0 ? 1 : 0;
@@ -83,6 +92,34 @@ struct Ray{
         min.x = std::max(min.x, std::max(min.y, min.z));
         max.x = std::min(max.x, std::min(max.y, max.z));
         return min.x > max.x ? -1.0f : min.x;
+    }
+    inline void getHitList(OctNode& node, std::vector<HitResult>& list){
+    	list.clear();
+		std::vector<OctNode*> stack(512); // 8^3; expect to go at least 3 deep fully
+		stack.push_back(&node);
+		while(!stack.empty()){
+			OctNode* cur = stack.back();
+			stack.pop_back();
+			AABB box(*cur);
+			float t = intersect(box);
+			if(t >= 0.0f){
+				if(cur->data){
+					list.push_back({cur->data, t});
+				}
+				else {
+					for(OctNode& i : cur->children){
+						stack.push_back(&i);
+					}
+				}
+			}
+		}
+		
+		if(list.size() > 8){	// keep only 8 nearest hits
+			std::partial_sort(begin(list), begin(list)+8, end(list));
+			list.erase(begin(list)+8, end(list));
+		}
+		else
+			std::sort(begin(list), end(list));
     }
 };
 
