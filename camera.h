@@ -66,6 +66,7 @@ public:
 	inline glm::mat4 getVP(){
 		return P * V;
 	}
-	inline glm::mat4& getV(){return V;}
+	inline const glm::mat4& getV(){return V;}
+	inline const glm::vec3& getAt(){return m_at;}
 };
 #endif
