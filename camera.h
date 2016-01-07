@@ -28,7 +28,7 @@ public:
     	const glm::vec3& at=glm::vec3(0.0f, 0.0f, -1.0f)) 
     	: m_eye(eye), m_at(at), m_fov(fov), m_whratio(ratio), m_near(near), m_far(far){
 		P = glm::perspective(m_fov, m_whratio, m_near, m_far);
-		m_yaw = 0.0f;
+		m_yaw = -90.0f;
 		m_pitch = 0.0f;
 		update();
 	}
@@ -45,9 +45,9 @@ public:
 		P = glm::perspective(m_fov, m_whratio, m_near, m_far);
 	}
 	inline const glm::vec3& getEye(){return m_eye;}
+	inline const glm::vec3& getAt(){return m_at;}
 	inline float getFov(){return m_fov;}
 	inline void setEye(const glm::vec3& eye){m_eye = eye;}
-	inline void lookAt(const glm::vec3& eye, const glm::vec3& at){m_eye = eye; m_at = at;}
 	inline glm::vec3 getRay(float x, float y){
 		glm::vec4 temp(x, y, 0.0f, 1.0f);
 		temp = IVP * temp;
@@ -67,6 +67,5 @@ public:
 		return P * V;
 	}
 	inline const glm::mat4& getV(){return V;}
-	inline const glm::vec3& getAt(){return m_at;}
 };
 #endif
