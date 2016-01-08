@@ -17,8 +17,8 @@ struct Interval3{
 		return *this;
 	}
 	inline Interval3& operator - (const Interval3& other){
-		min = min = other.max;
-		max = max = other.min;
+		min = min - other.max;
+		max = max - other.min;
 		return *this;
 	}
 	inline Interval3& operator * (const Interval3& other){

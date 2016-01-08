@@ -58,7 +58,7 @@ public:
 		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
 	}
 	void pitch(float amt){
-		m_pitch += amt;
+		m_pitch -= amt;
 	}
 	void yaw(float amt){
 		m_yaw -= amt;

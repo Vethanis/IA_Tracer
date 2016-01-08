@@ -8,6 +8,7 @@
 #include "glprogram.h"
 #include "debugmacro.h"
 #include "interval3.h"
+#include "omp.h"
 
 using namespace std;
 using namespace glm;
@@ -129,34 +130,37 @@ int main(){
         if(glfwGetKey(window.getWindow(), GLFW_KEY_F))
 			prog.setUniform("light_pos", camera.getEye());
 		
-		{
-			float y = -1.0f;
-			for(int r = 0; r < HEIGHT; r++){
-				float x = -1.0f;
-				for(int c = 0; c < WIDTH; c++){
-		 			vec2* di = BeamCast(camera.getIVP(), vec2(x, x+dx), vec2(y, y+dy), vec2(-1.0f, 1.0f), 0.001f);
-					if(di){
-						depth[r][c] = (di->x + di->y) * 0.5f;
-						vec3 pos = camera.getEye() + camera.getRay(x, y) * depth[r][c];
-						vec3 normal = normalize(pos);
-						pb.push_back(Point(pos, normal, normal, 10.0f));
+		if(glfwGetKey(window.getWindow(), GLFW_KEY_E)){
+			#pragma omp parallel for num_threads(4)
+			for(int k = 0; k < WIDTH * HEIGHT; k++){
+				int r = k / WIDTH;
+				int c = k % WIDTH;
+				float x = -1.0f + c * dx;
+				float y = -1.0f + r * dy;
+				vec2* di = BeamCast(camera.getIVP(), vec2(x, x+dx), vec2(y, y+dy), vec2(-1.0f, 1.0f), 0.1f);
+				if(di){
+					float z = (di->x + di->y) * 0.5f;
+					vec3 pos = camera.getEye() + camera.getRay(x, y) * z;
+					vec3 normal = normalize(pos);
+					vec3 L = normalize(vec3(5.0f, 5.0f, 5.0f));
+					float diffuse = dot(L, normal);
+					#pragma omp critical 
+					{
+						pb.push_back(Point(pos, normal, diffuse*normal, 10.0f));
 						delete di;
-					}   		
-					x += dx;
-					if(x >= 1.0f) cout << x << " ";
+					}
 				}
-				y += dy;
-					if(y >= 1.0f) cout << y << " ";
 			}
-
+		
 			float dist = 3.0f * glm::distance(pb[0].pos, pb[1].pos) * sqrt(WIDTH*HEIGHT);
 			for(auto& i : pb){
 				i.r = dist;
 			}
-	
+
 			pointMesh.upload(pb);
 			pb.clear();
 		}
+		
 		pointMesh.draw();
 		
         glfwSwapBuffers(window.getWindow());

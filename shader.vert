@@ -18,6 +18,8 @@ smooth out vec3 fragColor;
 void main(){
 	gl_Position = VP * vec4(position, 1);
 	gl_PointSize = radius / gl_Position.w;
+	fragColor = normal;
+	/*
 	vec3 L = normalize(light_pos - position);
 	float D = max(0.0, dot(L, normal));
 	vec3 H = normalize(normalize(eye - position) + L);
@@ -25,4 +27,5 @@ void main(){
 	float dist2 = dot(light_pos - position, light_pos - position);
 	fragColor = ambient + (D * color + S * color * light_color) / dist2;
 	fragColor.rgb = pow(fragColor.rgb, vec3(1.0/2.2));
+	*/
 }
