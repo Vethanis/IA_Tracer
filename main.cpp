@@ -20,13 +20,15 @@ using namespace glm;
 static float depth[HEIGHT][WIDTH];
 
 vec2* BeamCast(const mat4& IVP, const vec2& X, const vec2& Y, const vec2& Z, const float e){
-	Interval3* box = new Interval3(X, Y, Z);	// make an  AABB
+	Interval3* box = new Interval3(X, Y, Z);	// make an interval AABB
 	box->transform(IVP);	// transform to world space
 	vec2 a = IASphere(*box, {0.0f, 0.0f, 0.0f}, 1.0f);	// get base interval
+	vec2 wz(box->min.z, box->max.z);
+	printf("Z: [%.3f, %.3f], WZ: [%.3f, %.3f], F(B): [%.3f, %.3f]\n", Z.x, Z.y, wz.x, wz.y, a.x, a.y);
 	delete box;
 	if(a.x > 0.0f || a.y < 0.0f) return nullptr;	// no surface in interval
 	else {
-		if(abs(Z.y - Z.x) < e) return new vec2(Z);	// interval within threshold
+		if(Z.y - Z.x < e) return new vec2(Z);	// interval within threshold
 		else {
 			a = vec2(Z.x, (Z.x+Z.y) * 0.5f);
 			vec2* J = BeamCast(IVP, X, Y, a, e);	// test near bisection
@@ -36,25 +38,6 @@ vec2* BeamCast(const mat4& IVP, const vec2& X, const vec2& Y, const vec2& Z, con
 				a = vec2(a.y, Z.y);
 				return BeamCast(IVP, X, Y, a, e); // test far bisection
 			}
-		}
-	}
-}
-
-void Uniform(const mat4& IVP){
-	const float dx = 2.0f / WIDTH;
-	const float dy = 2.0f / HEIGHT;
-	int r = -1;
-	int c = -1;
-	for(float y = -1.0f; y < 1.0f; y += dy){
-		r++;
-		if(r >= HEIGHT) continue;
-		for(float x = -1.0f; x < 1.0f; x += dx){
-			c++;
-			if(c >= WIDTH) continue;
-			vec2* di = BeamCast(IVP, vec2(x, c+dx), vec2(y, y+dy), vec2(-1.0f, 1.0f), 0.001f);
-			if(di)
-				depth[r][c] = (di->x + di->y) * 0.5f;
-			delete di;
 		}
 	}
 }
@@ -98,7 +81,12 @@ int main(){
 	Input input(window.getWindow());
 	GLProgram prog("shader.vert", "shader.frag");
 	Camera camera;
-	camera.setEye({0.0f, 0.0f, 0.0f});  
+	camera.setEye({0.0f, 0.0f, 50.0f});
+	camera.update(); 
+	
+	vec2* asdf = BeamCast(camera.getIVP(), vec2(-1.0f, 1.0f), vec2(-1.0f, 1.0f), vec2(-1.0f, 1.0f), 0.001f);
+	delete asdf;
+	return 0;
 	
 	glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_DEPTH_TEST);
@@ -115,7 +103,6 @@ int main(){
     
     const float dx = 2.0f / (float)WIDTH;
 	const float dy = 2.0f / (float)HEIGHT;
-    
 	
     unsigned i = 0;
     double t = glfwGetTime();
@@ -137,24 +124,17 @@ int main(){
 				int c = k % WIDTH;
 				float x = -1.0f + c * dx;
 				float y = -1.0f + r * dy;
-				vec2* di = BeamCast(camera.getIVP(), vec2(x, x+dx), vec2(y, y+dy), vec2(-1.0f, 1.0f), 0.1f);
+				vec2* di = BeamCast(camera.getIVP(), vec2(x, x+dx), vec2(y, y+dy), vec2(-1.0f, 1.0f), 0.001f);
 				if(di){
 					float z = (di->x + di->y) * 0.5f;
-					vec3 pos = camera.getEye() + camera.getRay(x, y) * z;
+					delete di;
+					vec3 pos = camera.getPoint(x, y, z);
 					vec3 normal = normalize(pos);
-					vec3 L = normalize(vec3(5.0f, 5.0f, 5.0f));
-					float diffuse = dot(L, normal);
-					#pragma omp critical 
-					{
-						pb.push_back(Point(pos, normal, diffuse*normal, 10.0f));
-						delete di;
+					#pragma omp critical
+					{ 
+						pb.push_back(Point(pos, normal, normal, 2.0f));
 					}
 				}
-			}
-		
-			float dist = 3.0f * glm::distance(pb[0].pos, pb[1].pos) * sqrt(WIDTH*HEIGHT);
-			for(auto& i : pb){
-				i.r = dist;
 			}
 
 			pointMesh.upload(pb);

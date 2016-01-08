@@ -54,11 +54,17 @@ public:
 		temp = temp / temp.w;
 		return glm::normalize(glm::vec3(temp) - m_eye);
 	}
+	inline glm::vec3 getPoint(float x, float y, float z){
+		glm::vec4 temp(x, y, z, 1.0f);
+		temp = IVP * temp;
+		temp = temp / temp.w;
+		return glm::vec3(temp);
+	}
 	inline void move(const glm::vec3& v){
 		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
 	}
 	void pitch(float amt){
-		m_pitch -= amt;
+		m_pitch += amt;
 	}
 	void yaw(float amt){
 		m_yaw -= amt;

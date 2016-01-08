@@ -91,10 +91,11 @@ struct Interval3{
 	}
 };
 
+// point . point - center . center - r^2 = 0
 inline glm::vec2 IASphere(const Interval3& p, const glm::vec3& c, const float r){
 	const float common = glm::dot(c,c) + r*r;
 	const glm::vec2 v(glm::dot(p.min, p.min) - common, glm::dot(p.max, p.max) - common);
-	return glm::vec2(std::min(v.x, v.y), std::max(v.x, v.y));
+	return v;//glm::vec2(std::min(v.x, v.y), std::max(v.x, v.y));
 }
 
 #endif
