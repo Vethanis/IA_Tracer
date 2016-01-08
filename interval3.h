@@ -75,17 +75,15 @@ struct Interval3{
 	inline void transform(const glm::mat4& m){
 		glm::vec4 v(min.x, min.y, min.z, 1.0f);
 		v = m * v;
-		min.x = v.x / v.w;
-		min.y = v.y / v.w;
-		min.z = v.z / v.w;
+		v = v / v.w;
+		min = glm::vec3(v);
 		v.x = max.x;
 		v.y = max.y;
 		v.z = max.z;
 		v.w = 1.0f;
 		v = m * v;
-		max.x = v.x / v.w;
-		max.y = v.y / v.w;
-		max.z = v.z / v.w;
+		v = v / v.w;
+		max = glm::vec3(v);
 	}
 	inline float volume(){
 		glm::vec3 dim = max - min;

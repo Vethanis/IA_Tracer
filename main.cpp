@@ -14,8 +14,6 @@ using namespace glm;
 
 #define WIDTH 800
 #define HEIGHT 600
-#define NEAR -0.1f
-#define FAR -100.0f
 #define MAXDEPTH 64
 
 static float depth[HEIGHT][WIDTH];
@@ -42,11 +40,20 @@ vec2* BeamCast(const mat4& IVP, const vec2& X, const vec2& Y, const vec2& Z, con
 }
 
 void Uniform(const mat4& IVP){
-	for(unsigned r = 0; r < HEIGHT; r++){
-		for(unsigned c = 0; c < WIDTH; c++){
-			vec2* di = BeamCast(IVP, vec2(c, c+1), vec2(r, r+1), vec2(-0.1f, -100.0f), 0.001f);
+	const float dx = 2.0f / WIDTH;
+	const float dy = 2.0f / HEIGHT;
+	int r = -1;
+	int c = -1;
+	for(float y = -1.0f; y < 1.0f; y += dy){
+		r++;
+		if(r >= HEIGHT) continue;
+		for(float x = -1.0f; x < 1.0f; x += dx){
+			c++;
+			if(c >= WIDTH) continue;
+			vec2* di = BeamCast(IVP, vec2(x, c+dx), vec2(y, y+dy), vec2(-1.0f, 1.0f), 0.001f);
 			if(di)
 				depth[r][c] = (di->x + di->y) * 0.5f;
+			delete di;
 		}
 	}
 }
@@ -68,11 +75,11 @@ void Paint(const vec2& X, const vec2& Y, vec2* T){
 	}
 }
 
-void SubDivide(const mat4& IVP, const vec2& X, const vec2& Y, float near, int d, float e){
-	vec2* T = BeamCast(IVP, X, Y, vec2(near, -100.0f), e);
+void SubDivide(const mat4& IVP, const vec2& X, const vec2& Y, float w, int d, float e){
+	vec2* T = BeamCast(IVP, X, Y, vec2(w, 1.0f), e);
 	if(T == nullptr || d == MAXDEPTH)	// no result or at max depth
 		Paint(X, Y, T);
-	else{
+	else {
 		vec2 x1(X.x, 0.5f*(X.x+X.y));
 		vec2 x2(x1.y, X.y);
 		vec2 y1(Y.x, 0.5f*(Y.x+Y.y));
@@ -86,43 +93,28 @@ void SubDivide(const mat4& IVP, const vec2& X, const vec2& Y, float near, int d,
 }
 
 int main(){
-	Window window(1600, 900, 3, 3, "Octree Testing");
+	Window window(WIDTH, HEIGHT, 3, 3, "Octree Testing");
 	Input input(window.getWindow());
 	GLProgram prog("shader.vert", "shader.frag");
 	Camera camera;
-	camera.setEye({0.0f, 0.0f, 3.0f});
+	camera.setEye({0.0f, 0.0f, 0.0f});  
+	
+	glEnable(GL_PROGRAM_POINT_SIZE);
+    glEnable(GL_DEPTH_TEST);
+	PointMesh pointMesh;
 	
 	prog.bind();
 	prog.setUniform("light_pos", camera.getEye());
-	prog.setUniform("ambient", {0.0001f, 0.0001f, 0.0001f});
+	prog.setUniform("ambient", {0.001f, 0.001f, 0.001f});
 	prog.setUniform("light_color", {1.0f, 1.0f, 1.0f});
 	prog.setUniformFloat("shininess", 64.0f);
 	
     PointBuffer pb;
     pb.reserve(1024);
-
     
-    for(float theta = 0.0f; theta < 3.14f; theta += 0.005f){
-    	for(float phi = 0.0f; phi < 6.28f; phi += 0.005f){
-    		float x = cos(theta) * sin(phi);
-    		float z = sin(theta) * sin(phi);
-    		float y = cos(phi);
-				glm::vec3 pos(x, y, z);
-				glm::vec3 normal = glm::normalize(pos);
-				pb.push_back(Point(pos, normal, normal, 5.0f));
-		}
-	}
-	float dist = glm::distance(pb[0].pos, pb[1].pos)* sqrt(1600*900);
-	std::cout << dist << std::endl;
-	for(auto& i : pb){
-		i.r = dist;
-	}
-	
-    glEnable(GL_PROGRAM_POINT_SIZE);
-    glEnable(GL_DEPTH_TEST);
-	PointMesh pointMesh;
-	pointMesh.upload(pb);
-	pb.clear();
+    const float dx = 2.0f / (float)WIDTH;
+	const float dy = 2.0f / (float)HEIGHT;
+    
 	
     unsigned i = 0;
     double t = glfwGetTime();
@@ -136,6 +128,35 @@ int main(){
         prog.setUniform("eye", camera.getEye());
         if(glfwGetKey(window.getWindow(), GLFW_KEY_F))
 			prog.setUniform("light_pos", camera.getEye());
+		
+		{
+			float y = -1.0f;
+			for(int r = 0; r < HEIGHT; r++){
+				float x = -1.0f;
+				for(int c = 0; c < WIDTH; c++){
+		 			vec2* di = BeamCast(camera.getIVP(), vec2(x, x+dx), vec2(y, y+dy), vec2(-1.0f, 1.0f), 0.001f);
+					if(di){
+						depth[r][c] = (di->x + di->y) * 0.5f;
+						vec3 pos = camera.getEye() + camera.getRay(x, y) * depth[r][c];
+						vec3 normal = normalize(pos);
+						pb.push_back(Point(pos, normal, normal, 10.0f));
+						delete di;
+					}   		
+					x += dx;
+					if(x >= 1.0f) cout << x << " ";
+				}
+				y += dy;
+					if(y >= 1.0f) cout << y << " ";
+			}
+
+			float dist = 3.0f * glm::distance(pb[0].pos, pb[1].pos) * sqrt(WIDTH*HEIGHT);
+			for(auto& i : pb){
+				i.r = dist;
+			}
+	
+			pointMesh.upload(pb);
+			pb.clear();
+		}
 		pointMesh.draw();
 		
         glfwSwapBuffers(window.getWindow());

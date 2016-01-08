@@ -30,7 +30,7 @@ all: $(EXE)
 debug:	CXXFLAGS += -DDEBUG -g
 debug:	$(EXE)
 
-release: CXXFLAGS += -O3
+release: CXXFLAGS += -O2
 release: $(EXE)
 
 run:	$(EXE)
