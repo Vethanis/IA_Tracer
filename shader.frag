@@ -1,9 +1,11 @@
-#version 330
+#version 330 core
 
-smooth in vec3 fragColor;
+in vec2 texcoord;
+
+uniform sampler2D image;
 
 out vec4 out_color;
 
 void main(){
-	out_color = vec4(fragColor, 1.0);
+	out_color = texture2D(image, texcoord);
 }

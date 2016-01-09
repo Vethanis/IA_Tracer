@@ -1,16 +1,11 @@
-#version 330
+#version 330 core
 
-layout(location=0) in vec3 position;
-layout(location=1) in vec3 normal;
-layout(location=2) in vec3 color;
-layout(location=3) in float radius;
+in vec2 vertex;
 
-uniform mat4 VP;
-
-smooth out vec3 fragColor;
+out vec2 texcoord;
 
 void main(){
-	gl_Position = VP * vec4(position, 1);
-	gl_PointSize = radius / gl_Position.w;
-	fragColor = color;
+	gl_Position = vec4(vertex, 0.0, 1.0);
+	
+	texcoord = vertex * 0.5 + vec2(0.5, 0.5);
 }

@@ -18,8 +18,7 @@ struct Interval{
 		float temp[4] = {	min*other.min, 
 							min*other.max, 
 							max*other.min, 
-							max*other.max 
-						};
+							max*other.max };
 		min = std::min(std::min(std::min(temp[0], temp[1]), temp[2]), temp[3]);
 		max = std::max(std::max(std::max(temp[0], temp[1]), temp[2]), temp[3]);
 		return *this;

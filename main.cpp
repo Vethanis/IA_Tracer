@@ -1,20 +1,18 @@
 #include "myglheaders.h"
-#include "octree.h"
 #include <iostream>
-#include "time.h"
-#include <random>
 #include "window.h"
 #include "input.h"
 #include "glprogram.h"
 #include "debugmacro.h"
 #include "interval3.h"
+#include "glscreen.h"
 #include "omp.h"
 
 using namespace std;
 using namespace glm;
 
-#define WIDTH 800
-#define HEIGHT 600
+#define WIDTH 400
+#define HEIGHT 300
 #define MAXDEPTH 64
 
 static float depth[HEIGHT][WIDTH];
@@ -64,7 +62,7 @@ void Paint(const Interval& X, const Interval& Y, Interval* T){
 				int r = (y+1.0f) * cy;
 				c = std::min(std::max(0, c), WIDTH);
 				r = std::min(std::max(0, r), HEIGHT);
-				depth[r][c] = -100.0f;
+				depth[r][c] = 1.0f;
 			}
 		}
 	}
@@ -95,21 +93,15 @@ int main(){
 	camera.setEye({0.0f, 0.0f, 5.0f});
 	camera.update(); 
 	
-	
-	glEnable(GL_PROGRAM_POINT_SIZE);
-    glEnable(GL_DEPTH_TEST);
-	PointMesh pointMesh;
+	GLScreen screen(WIDTH, HEIGHT);
 	
 	prog.bind();
-	
-    PointBuffer pb;
-    pb.reserve(1024);
     
     const float dx = 2.0f / (float)WIDTH;
 	const float dy = 2.0f / (float)HEIGHT;
 	
 	vec3 light_pos(1.0f, 1.0f, 1.0f);
-	vec3 ambient(0.07f, 0.05f, 0.05f);
+	vec3 ambient(0.1f, 0.05f, 0.05f);
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
@@ -117,46 +109,35 @@ int main(){
     double t = glfwGetTime();
     while (!glfwWindowShouldClose(window.getWindow())){
     	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+    	screen.clear();
         double dt = glfwGetTime() - t;
         t += dt;
         
         input.poll(dt, camera);
-        prog.setUniform("VP", camera.getVP());
-        prog.setUniform("eye", camera.getEye());
-        if(glfwGetKey(window.getWindow(), GLFW_KEY_F))
-			prog.setUniform("light_pos", camera.getEye());
-		
-		if(glfwGetKey(window.getWindow(), GLFW_KEY_E)){
-			#pragma omp parallel for num_threads(4)
-			for(int k = 0; k < WIDTH * HEIGHT; k++){
-				int r = k / WIDTH;
-				int c = k % WIDTH;
-				float x = -1.0f + c * dx;
-				float y = -1.0f + r * dy;
-				Interval* di = BeamCast(camera.getIVP(), {x, x+dx}, {y, y+dy}, {-1.0f, 1.0f}, 0.01f);
-				if(di){
-					float z = di->center();
-					delete di;
-					vec3 pos = camera.getPoint(x, y, z);
-					vec3 normal = normalize(pos);
-					vec3 V = normalize(camera.getEye() - pos);
-					vec3 L = normalize(light_pos - pos);
-					vec3 H = normalize(L + V);
-					float D = std::max(0.0f, dot(normal, L));
-					float S = pow(std::max(0.0f, dot(H, normal)), 32.0f);
-					vec3 color = ambient + (D * base_color + S * light_color * base_color) / distance(light_pos, pos);
-					#pragma omp critical
-					{ 
-						pb.push_back(Point(pos, normal, color, 5.0f));
-					}
-				}
-			}
 
-			pointMesh.upload(pb);
-			pb.clear();
+		#pragma omp parallel for num_threads(8)
+		for(int k = 0; k < WIDTH * HEIGHT; k++){
+			int r = k / WIDTH;
+			int c = k % WIDTH;
+			float x = c * dx - 1.0f;
+			float y = r * dy - 1.0f;
+			Interval* di = BeamCast(camera.getIVP(), {x, x+dx}, {y, y+dy}, {0.0f, 1.0f}, 0.001f);
+			if(di){
+				float z = di->center();
+				delete di;
+				vec3 pos = camera.getPoint(x, y, z);
+				vec3 normal = normalize(pos);
+				vec3 V = normalize(camera.getEye() - pos);
+				vec3 L = normalize(light_pos - pos);
+				vec3 H = normalize(L + V);
+				float D = std::max(0.0f, dot(normal, L));
+				float S = pow(std::max(0.0f, dot(H, normal)), 32.0f);
+				vec3 color = ambient + (D * normal + S * light_color * normal) / distance(light_pos, pos);
+				screen.setPixel(r*WIDTH + c, color);
+			}
 		}
 		
-		pointMesh.draw();
+		screen.draw();
 		
         glfwSwapBuffers(window.getWindow());
         i++;
