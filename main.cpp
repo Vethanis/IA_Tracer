@@ -13,7 +13,7 @@ using namespace glm;
 
 #define WIDTH 400
 #define HEIGHT 300
-#define MAXDEPTH 64
+#define MAXDEPTH 9
 
 static float depth[HEIGHT][WIDTH];
 
@@ -40,28 +40,22 @@ Interval* BeamCast(const mat4& IVP, const Interval& X, const Interval& Y, const 
 }
 
 void Paint(const Interval& X, const Interval& Y, Interval* T){
-	float dy = 2.0f / WIDTH;
-	float dx = 2.0f / HEIGHT;
 	float cx = WIDTH * 0.5f;
 	float cy = HEIGHT * 0.5f;
+	int rmin = (Y.min + 1.0f) * cy;
+	int rmax = (Y.max + 1.0f) * cy;
+	int cmin = (X.min + 1.0f) * cx;
+	int cmax = (X.max + 1.0f) * cx;
 	if(T){
-		for(float y = Y.min; y < Y.max; y += dy){
-			for(float x = X.min; x < X.max; x += dx){
-				int c = (x+1.0f) * cx;
-				int r = (y+1.0f) * cy;
-				c = std::min(std::max(0, c), WIDTH);
-				r = std::min(std::max(0, r), HEIGHT);
+		for(int r = rmin; r < rmax; r++){
+			for(int c = cmin; c < cmax; c++){
 				depth[r][c] = T->center();
 			}
 		}
 	}
 	else{
-		for(float y = Y.min; y < Y.max; y += dy){
-			for(float x = X.min; x < X.max; x += dx){
-				int c = (x+1.0f) * cx;
-				int r = (y+1.0f) * cy;
-				c = std::min(std::max(0, c), WIDTH);
-				r = std::min(std::max(0, r), HEIGHT);
+		for(int r = rmin; r < rmax; r++){
+			for(int c = cmin; c < cmax; c++){
 				depth[r][c] = 1.0f;
 			}
 		}
@@ -70,7 +64,7 @@ void Paint(const Interval& X, const Interval& Y, Interval* T){
 
 void SubDivide(const mat4& IVP, const Interval& X, const Interval& Y, float w, int d, float e){
 	Interval* T = BeamCast(IVP, X, Y, Interval(w, 1.0f), e);
-	if(T == nullptr || d == MAXDEPTH)	// no result or at max depth
+	if(T == nullptr || d >= MAXDEPTH)	// no result or at max depth
 		Paint(X, Y, T);
 	else {
 		Interval x1(X.min, X.center());
@@ -110,32 +104,36 @@ int main(){
     while (!glfwWindowShouldClose(window.getWindow())){
     	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     	screen.clear();
+    	for(unsigned r = 0; r < HEIGHT; r++){
+    	for(unsigned c = 0; c < WIDTH; c++){
+    		depth[r][c] = 1.0f;
+    	}}
         double dt = glfwGetTime() - t;
         t += dt;
         
         input.poll(dt, camera);
+        
+        SubDivide(camera.getIVP(), {-1.0f, 1.0f}, {-1.0f, 1.0f}, 0.0f, 0, 1.0f);
 
-		#pragma omp parallel for num_threads(8)
+		#pragma omp parallel for num_threads(8) schedule(dynamic, 100)
 		for(int k = 0; k < WIDTH * HEIGHT; k++){
 			int r = k / WIDTH;
 			int c = k % WIDTH;
-			float x = c * dx - 1.0f;
-			float y = r * dy - 1.0f;
-			Interval* di = BeamCast(camera.getIVP(), {x, x+dx}, {y, y+dy}, {0.0f, 1.0f}, 0.001f);
-			if(di){
-				float z = di->center();
-				delete di;
-				vec3 pos = camera.getPoint(x, y, z);
+			if(depth[r][c] < 1.0f){
+				float x = c * dx - 1.0f;
+				float y = r * dy - 1.0f;
+				vec3 pos = camera.getPoint(x, y, depth[r][c]);
 				vec3 normal = normalize(pos);
 				vec3 V = normalize(camera.getEye() - pos);
 				vec3 L = normalize(light_pos - pos);
 				vec3 H = normalize(L + V);
 				float D = std::max(0.0f, dot(normal, L));
-				float S = pow(std::max(0.0f, dot(H, normal)), 32.0f);
+				float S = pow(std::max(0.0f, dot(H, normal)), 16.0f);
 				vec3 color = ambient + (D * normal + S * light_color * normal) / distance(light_pos, pos);
 				screen.setPixel(r*WIDTH + c, color);
 			}
 		}
+		
 		
 		screen.draw();
 		
