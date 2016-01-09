@@ -23,8 +23,8 @@ class Camera{
 	glm::vec3 m_eye, m_at;
 	float m_fov, m_whratio, m_near, m_far, m_yaw, m_pitch;
 public:
-    Camera(float fov=45.0f, float ratio=4.0f/3.0f, float near=0.1f, 
-    	float far=100.0f, const glm::vec3& eye=glm::vec3(0.0f), 
+    Camera(float fov=45.0f, float ratio=4.0f/3.0f, float near=1.0f, 
+    	float far=10.0f, const glm::vec3& eye=glm::vec3(0.0f), 
     	const glm::vec3& at=glm::vec3(0.0f, 0.0f, -1.0f)) 
     	: m_eye(eye), m_at(at), m_fov(fov), m_whratio(ratio), m_near(near), m_far(far){
 		P = glm::perspective(m_fov, m_whratio, m_near, m_far);

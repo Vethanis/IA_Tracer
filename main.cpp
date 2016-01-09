@@ -19,90 +19,99 @@ using namespace glm;
 
 static float depth[HEIGHT][WIDTH];
 
-vec2* BeamCast(const mat4& IVP, const vec2& X, const vec2& Y, const vec2& Z, const float e){
+Interval* BeamCast(const mat4& IVP, const Interval& X, const Interval& Y, const Interval& Z, const float e){
 	Interval3* box = new Interval3(X, Y, Z);	// make an interval AABB
 	box->transform(IVP);	// transform to world space
-	vec2 a = IASphere(*box, {0.0f, 0.0f, 0.0f}, 1.0f);	// get base interval
-	vec2 wz(box->min.z, box->max.z);
-	printf("Z: [%.3f, %.3f], WZ: [%.3f, %.3f], F(B): [%.3f, %.3f]\n", Z.x, Z.y, wz.x, wz.y, a.x, a.y);
+	Interval a = IASphere(*box, {0.0f, 0.0f, 0.0f}, 1.0f);	// get base interval
+	//printf("Z: [%f, %f], B.z: [%.3f, %.3f], F(B): [%.3f, %.3f]\n", Z.min, Z.max, box->z.min, box->z.max, a.min, a.max);
 	delete box;
-	if(a.x > 0.0f || a.y < 0.0f) return nullptr;	// no surface in interval
+	if(a.min > 0.0f || a.max < 0.0f) return nullptr;	// no surface in interval
 	else {
-		if(Z.y - Z.x < e) return new vec2(Z);	// interval within threshold
+		if(Z.width() < e) return new Interval(Z);	// interval within threshold
 		else {
-			a = vec2(Z.x, (Z.x+Z.y) * 0.5f);
-			vec2* J = BeamCast(IVP, X, Y, a, e);	// test near bisection
+			a.min = Z.min; a.max = Z.center();
+			Interval* J = BeamCast(IVP, X, Y, a, e);	// test near bisection
 			if(J)
 				return J;
 			else{
-				a = vec2(a.y, Z.y);
+				a.min = a.max; a.max = Z.max;
 				return BeamCast(IVP, X, Y, a, e); // test far bisection
 			}
 		}
 	}
 }
 
-void Paint(const vec2& X, const vec2& Y, vec2* T){
+void Paint(const Interval& X, const Interval& Y, Interval* T){
+	float dy = 2.0f / WIDTH;
+	float dx = 2.0f / HEIGHT;
+	float cx = WIDTH * 0.5f;
+	float cy = HEIGHT * 0.5f;
 	if(T){
-		for(int y = Y.x; y < Y.y; y++){
-			for(int x = X.x; x < X.y; x++){
-				depth[y][x] = 0.5f*(T->x + T->y);
+		for(float y = Y.min; y < Y.max; y += dy){
+			for(float x = X.min; x < X.max; x += dx){
+				int c = (x+1.0f) * cx;
+				int r = (y+1.0f) * cy;
+				c = std::min(std::max(0, c), WIDTH);
+				r = std::min(std::max(0, r), HEIGHT);
+				depth[r][c] = T->center();
 			}
 		}
 	}
 	else{
-		for(int y = Y.x; y < Y.y; y++){
-			for(int x = X.x; x < X.y; x++){
-				depth[y][x] = -100.0f;
+		for(float y = Y.min; y < Y.max; y += dy){
+			for(float x = X.min; x < X.max; x += dx){
+				int c = (x+1.0f) * cx;
+				int r = (y+1.0f) * cy;
+				c = std::min(std::max(0, c), WIDTH);
+				r = std::min(std::max(0, r), HEIGHT);
+				depth[r][c] = -100.0f;
 			}
 		}
 	}
 }
 
-void SubDivide(const mat4& IVP, const vec2& X, const vec2& Y, float w, int d, float e){
-	vec2* T = BeamCast(IVP, X, Y, vec2(w, 1.0f), e);
+void SubDivide(const mat4& IVP, const Interval& X, const Interval& Y, float w, int d, float e){
+	Interval* T = BeamCast(IVP, X, Y, Interval(w, 1.0f), e);
 	if(T == nullptr || d == MAXDEPTH)	// no result or at max depth
 		Paint(X, Y, T);
 	else {
-		vec2 x1(X.x, 0.5f*(X.x+X.y));
-		vec2 x2(x1.y, X.y);
-		vec2 y1(Y.x, 0.5f*(Y.x+Y.y));
-		vec2 y2(y1.x, Y.y);
-		float a = std::min(T->x, T->y);
-		SubDivide(IVP, x1, y1, a, d+1, e*0.5f);
-		SubDivide(IVP, x1, y2, a, d+1, e*0.5f);
-		SubDivide(IVP, x2, y1, a, d+1, e*0.5f);
-		SubDivide(IVP, x2, y2, a, d+1, e*0.5f);
+		Interval x1(X.min, X.center());
+		Interval x2(x1.max, X.max);
+		Interval y1(Y.min, Y.center());
+		Interval y2(y1.max, Y.max);
+		float z = std::min(T->min, T->max);
+		SubDivide(IVP, x1, y1, z, d+1, e*0.5f);
+		SubDivide(IVP, x1, y2, z, d+1, e*0.5f);
+		SubDivide(IVP, x2, y1, z, d+1, e*0.5f);
+		SubDivide(IVP, x2, y2, z, d+1, e*0.5f);
 	}
 }
 
 int main(){
-	Window window(WIDTH, HEIGHT, 3, 3, "Octree Testing");
+	Window window(WIDTH, HEIGHT, 3, 3, "IA Beam Casting");
 	Input input(window.getWindow());
 	GLProgram prog("shader.vert", "shader.frag");
 	Camera camera;
-	camera.setEye({0.0f, 0.0f, 50.0f});
+	camera.setEye({0.0f, 0.0f, 5.0f});
 	camera.update(); 
 	
-	vec2* asdf = BeamCast(camera.getIVP(), vec2(-1.0f, 1.0f), vec2(-1.0f, 1.0f), vec2(-1.0f, 1.0f), 0.001f);
-	delete asdf;
-	return 0;
 	
 	glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_DEPTH_TEST);
 	PointMesh pointMesh;
 	
 	prog.bind();
-	prog.setUniform("light_pos", camera.getEye());
-	prog.setUniform("ambient", {0.001f, 0.001f, 0.001f});
-	prog.setUniform("light_color", {1.0f, 1.0f, 1.0f});
-	prog.setUniformFloat("shininess", 64.0f);
 	
     PointBuffer pb;
     pb.reserve(1024);
     
     const float dx = 2.0f / (float)WIDTH;
 	const float dy = 2.0f / (float)HEIGHT;
+	
+	vec3 light_pos(1.0f, 1.0f, 1.0f);
+	vec3 ambient(0.07f, 0.05f, 0.05f);
+	vec3 light_color(1.0f);
+	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
     unsigned i = 0;
     double t = glfwGetTime();
@@ -124,15 +133,21 @@ int main(){
 				int c = k % WIDTH;
 				float x = -1.0f + c * dx;
 				float y = -1.0f + r * dy;
-				vec2* di = BeamCast(camera.getIVP(), vec2(x, x+dx), vec2(y, y+dy), vec2(-1.0f, 1.0f), 0.001f);
+				Interval* di = BeamCast(camera.getIVP(), {x, x+dx}, {y, y+dy}, {-1.0f, 1.0f}, 0.01f);
 				if(di){
-					float z = (di->x + di->y) * 0.5f;
+					float z = di->center();
 					delete di;
 					vec3 pos = camera.getPoint(x, y, z);
 					vec3 normal = normalize(pos);
+					vec3 V = normalize(camera.getEye() - pos);
+					vec3 L = normalize(light_pos - pos);
+					vec3 H = normalize(L + V);
+					float D = std::max(0.0f, dot(normal, L));
+					float S = pow(std::max(0.0f, dot(H, normal)), 32.0f);
+					vec3 color = ambient + (D * base_color + S * light_color * base_color) / distance(light_pos, pos);
 					#pragma omp critical
 					{ 
-						pb.push_back(Point(pos, normal, normal, 2.0f));
+						pb.push_back(Point(pos, normal, color, 5.0f));
 					}
 				}
 			}
