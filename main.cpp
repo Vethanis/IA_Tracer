@@ -11,9 +11,9 @@
 using namespace std;
 using namespace glm;
 
-#define WIDTH 400
-#define HEIGHT 300
-#define MAXDEPTH 9
+#define WIDTH 800
+#define HEIGHT 600
+#define MAXDEPTH 8
 
 static float depth[HEIGHT][WIDTH];
 
@@ -46,32 +46,24 @@ void Paint(const Interval& X, const Interval& Y, Interval* T){
 	int rmax = (Y.max + 1.0f) * cy;
 	int cmin = (X.min + 1.0f) * cx;
 	int cmax = (X.max + 1.0f) * cx;
-	if(T){
-		for(int r = rmin; r < rmax; r++){
-			for(int c = cmin; c < cmax; c++){
-				depth[r][c] = T->center();
-			}
-		}
-	}
-	else{
-		for(int r = rmin; r < rmax; r++){
-			for(int c = cmin; c < cmax; c++){
-				depth[r][c] = 1.0f;
-			}
+	for(int r = rmin; r < rmax; r++){
+		for(int c = cmin; c < cmax; c++){
+			depth[r][c] = T->center();
 		}
 	}
 }
 
 void SubDivide(const mat4& IVP, const Interval& X, const Interval& Y, float w, int d, float e){
 	Interval* T = BeamCast(IVP, X, Y, Interval(w, 1.0f), e);
-	if(T == nullptr || d >= MAXDEPTH)	// no result or at max depth
+	if(T == nullptr) return;
+	if(d >= MAXDEPTH)	// no result or at max depth
 		Paint(X, Y, T);
 	else {
 		Interval x1(X.min, X.center());
 		Interval x2(x1.max, X.max);
 		Interval y1(Y.min, Y.center());
 		Interval y2(y1.max, Y.max);
-		float z = std::min(T->min, T->max);
+		float z = std::min(T->min, T->max)*0.333f;
 		SubDivide(IVP, x1, y1, z, d+1, e*0.5f);
 		SubDivide(IVP, x1, y2, z, d+1, e*0.5f);
 		SubDivide(IVP, x2, y1, z, d+1, e*0.5f);
@@ -113,7 +105,7 @@ int main(){
         
         input.poll(dt, camera);
         
-        SubDivide(camera.getIVP(), {-1.0f, 1.0f}, {-1.0f, 1.0f}, 0.0f, 0, 1.0f);
+        SubDivide(camera.getIVP(), {-1.0f, 1.0f}, {-1.0f, 1.0f}, 0.0f, 0, 0.5f);
 
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 100)
 		for(int k = 0; k < WIDTH * HEIGHT; k++){
