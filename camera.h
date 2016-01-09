@@ -4,6 +4,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/rotate_vector.hpp"
+#include <algorithm>
 
 #define up_vec glm::vec3(0.0f, 1.0f, 0.0f)
 
@@ -23,7 +24,7 @@ class Camera{
 	glm::vec3 m_eye, m_at;
 	float m_fov, m_whratio, m_near, m_far, m_yaw, m_pitch;
 public:
-    Camera(float fov=45.0f, float ratio=4.0f/3.0f, float near=0.5f, 
+    Camera(float fov=45.0f, float ratio=16.0f/9.0f, float near=0.1f, 
     	float far=10.0f, const glm::vec3& eye=glm::vec3(0.0f), 
     	const glm::vec3& at=glm::vec3(0.0f, 0.0f, -1.0f)) 
     	: m_eye(eye), m_at(at), m_fov(fov), m_whratio(ratio), m_near(near), m_far(far){
@@ -65,9 +66,11 @@ public:
 	}
 	void pitch(float amt){
 		m_pitch += amt;
+		m_pitch = std::max(std::min(89.0f, m_pitch), -89.0f);
 	}
 	void yaw(float amt){
 		m_yaw -= amt;
+		m_yaw = fmod(m_yaw, 360.0f);
 	}
 	inline glm::mat4 getVP(){
 		return P * V;
