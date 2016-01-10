@@ -6,7 +6,9 @@
 #include "glprogram.h"
 #include "debugmacro.h"
 #include "glscreen.h"
+#include "zpyramid.h"
 #include "omp.h"
+
 
 using namespace std;
 using namespace glm;
@@ -14,7 +16,7 @@ using namespace glm;
 #define WIDTH 640
 #define HEIGHT 360
 
-static double depths[HEIGHT][WIDTH];
+//void subDivide(camera& cam, 
 
 int clamp(int a, int l, int h){
 	return std::max(std::min(a, h), l);
@@ -68,9 +70,10 @@ int main(){
 	GLProgram prog("shader.vert", "shader.frag");
 	Camera camera;
 	camera.setEye({0.0f, 0.0f, 1.0f});
-	camera.update(); 
-	
+	camera.update();
 	GLScreen screen(WIDTH, HEIGHT);
+	
+	ZPyramid pyramid(WIDTH, HEIGHT);
 	
 	prog.bind();
     
@@ -102,22 +105,22 @@ int main(){
 			const float x = c * dx - 1.0f;
 			const float y = r * dy - 1.0f;
 			vec3 rd = camera.getRay(x, y);
-			float t = trace(ro, rd, 0.0001);
+			float t = trace(ro, rd, 0.001f);
 			if(t == -1.0f) continue;
-			depths[r][c] = t / 100.0;
+			pyramid(8, x, y) = t / 100.0;
 		}
 		
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
 		for(int k = 0; k < WIDTH * HEIGHT; k++){
 			const int r = clamp(k / WIDTH, 1, HEIGHT-2);
 			const int c = clamp(k % WIDTH, 1, WIDTH-2);
-			if(depths[r][c] == 1.0f) continue;
-			const float x = c * dx - 1.0f;
-			const float y = r * dy - 1.0f;
-			vec4 pos = IP * vec4(x, y, depths[r][c], 1.0f);
+			const double x = c * dx - 1.0f;
+			const double y = r * dy - 1.0f;
+			if(pyramid(8, x, y) == 1.0f) continue;
+			vec4 pos = IP * vec4(x, y, pyramid(8, x, y), 1.0);
 			pos = pos / pos.w;
-			vec3 N = normalize(vec3(depths[r][c+1] - depths[r][c-1],
-									depths[r+1][c] - depths[r-1][c],
+			vec3 N = normalize(vec3(pyramid(8, x+dx, y) - pyramid(8, x-dx, y),
+									pyramid(8, x, y+dy) - pyramid(8, x, y-dy),
 									dz));
 			vec3 L = normalize(vec3( 0.0f, 0.0f, 1.0f));
 			vec3 H = normalize(L + vec3(0.0f, 0.0f, 1.0f));
@@ -133,10 +136,7 @@ int main(){
         glfwSwapBuffers(window.getWindow());    	
         glClear(GL_COLOR_BUFFER_BIT);
     	screen.clear();
-    	for(unsigned r = 0; r < HEIGHT; r++){
-    	for(unsigned c = 0; c < WIDTH; c++){
-    		depths[r][c] = 1.0f;
-    	}}
+    	pyramid.clear(1.0);
     	
         i++;
         if(i >= 60){
@@ -148,3 +148,4 @@ int main(){
     }
     return 0;
 }
+
