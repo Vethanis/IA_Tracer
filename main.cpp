@@ -13,8 +13,8 @@
 using namespace std;
 using namespace glm;
 
-#define WIDTH 640
-#define HEIGHT 360
+#define WIDTH 1280
+#define HEIGHT 720
 
 //void subDivide(camera& cam, 
 
@@ -80,6 +80,7 @@ int main(){
     const float dx = 2.0f / (float)WIDTH;
 	const float dy = 2.0f / (float)HEIGHT;
 	const float dz = (dx+dy)*0.5f / 100.0f;
+	const int pf = pyramid.getMaxDepth();
 	
 	vec3 ambient(0.001f, 0.0005f, 0.0005f);
     vec3 light_pos(0.f, 0.f, 2.f);
@@ -107,7 +108,7 @@ int main(){
 			vec3 rd = camera.getRay(x, y);
 			float t = trace(ro, rd, 0.001f);
 			if(t == -1.0f) continue;
-			pyramid(8, x, y) = t / 100.0;
+			pyramid(pf, x, y) = t / 100.0;
 		}
 		
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
@@ -116,11 +117,11 @@ int main(){
 			const int c = clamp(k % WIDTH, 1, WIDTH-2);
 			const double x = c * dx - 1.0f;
 			const double y = r * dy - 1.0f;
-			if(pyramid(8, x, y) == 1.0f) continue;
-			vec4 pos = IP * vec4(x, y, pyramid(8, x, y), 1.0);
+			if(pyramid(pf, x, y) == 1.0f) continue;
+			vec4 pos = IP * vec4(x, y, pyramid(pf, x, y), 1.0);
 			pos = pos / pos.w;
-			vec3 N = normalize(vec3(pyramid(8, x+dx, y) - pyramid(8, x-dx, y),
-									pyramid(8, x, y+dy) - pyramid(8, x, y-dy),
+			vec3 N = normalize(vec3(pyramid(pf, x+dx, y) - pyramid(pf, x-dx, y),
+									pyramid(pf, x, y+dy) - pyramid(pf, x, y-dy),
 									dz));
 			vec3 L = normalize(vec3( 0.0f, 0.0f, 1.0f));
 			vec3 H = normalize(L + vec3(0.0f, 0.0f, 1.0f));
