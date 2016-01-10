@@ -4,7 +4,12 @@
 #define GLM_SWIZZLE
 #include "glm/glm.hpp"
 
-// taken from nimitz and paniq: http://glslsandbox.com/e#29925.2
+
+/******************************************************************/
+/*                                                                */
+/* taken from nimitz and paniq: http://glslsandbox.com/e#29925.2  */
+/*                                                                */
+/******************************************************************/
 
 namespace glm{
 
@@ -336,32 +341,11 @@ inline vec2 isphere64(const mat3& p, const vec3& c, float r){
 	return ipow128(p[0].xy() + c.xx()) + ipow128(p[1].xy() - c.yy()) + ipow128(p[2].xy() - c.zz()) - r*r;
 }
 
-inline mat3 iatransform(const mat4& IVP, const mat3& p){
-	vec4 l = vec4(p[0].x, p[1].x, p[2].x, 1.0f);
-	l = IVP * l;
-	l = l / l.w;
-	vec4 h = vec4(p[0].y, p[1].y, p[2].y, 1.0f);
-	h = IVP * h;
-	h = h / h.w;
-	return iavec3(vec2(l.x, h.x), vec2(l.y, h.y), vec2(l.z, h.z));
-}
-
 float icenter(vec2 v){
 	return (v.x + v.y) * 0.5f;
 }
 
-
 /*
-vec2 map(const mat3& p);
-
-inline vec3 normal(const vec3& p)
-{
-	vec2 ep = vec2(0.0f, 0.001f);
-	vec2 hx = map(iavec3(p + ep.yxx())) - map(iavec3(p - ep.yxx()));
-	vec2 hy = map(iavec3(p + ep.xyx())) - map(iavec3(p - ep.xyx()));
-	vec2 hz = map(iavec3(p + ep.xxy())) - map(iavec3(p - ep.xxy()));
-	return normalize(vec3(hx.x, hy.x, hz.x));
-}
 
 inline vec2 trace(const vec3& ro, const vec3& rd, vec2 t) 
 {

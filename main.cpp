@@ -13,34 +13,15 @@ using namespace glm;
 
 #define WIDTH 640
 #define HEIGHT 360
-#define MAXDEPTH 8
 
-static float depth[HEIGHT][WIDTH];
+static float depths[HEIGHT][WIDTH];
 
-vec2 map(const mat3& p){
-	return isphere(p, vec3(0.0f), 1.0f);
+int clamp(int a, int l, int h){
+	return std::max(std::min(a, h), l);
 }
 
-vec2* BeamCast(const mat4& IVP, const vec2& X, const vec2& Y, const vec2& Z, const float e){
-	vec2 z = Z;
-	if(z.y - z.x < e) return new vec2(z);
-	for(int i = 0; i < 60; i++){
-		//cout << z.x << " " << z.y << endl;
-		float zc = icenter(z);
-		vec2 z0 = vec2(z.x, zc);
-		if(icontains(map(iatransform(IVP, iavec3(X, Y, z0))), 0.0f)){
-			if(z0.y - z0.x < e) return new vec2(z0);
-			z = z0; continue;
-		}
-		vec2 z1 = vec2(zc, z.y);
-		if(icontains(map(iatransform(IVP, iavec3(X, Y, z1))), 0.0f)){
-			if(z1.y - z1.x < e) return new vec2(z1);
-			z = z1; continue;
-		}
-		break;
-	}
-	if(z.y < Z.y) return new vec2(z);
-	return nullptr;
+vec2 map(const mat3& p){
+	return isphere(p, {0.0f, 0.0f, 0.0f}, 1.0f);
 }
 
 vec2 trace(const vec3& ro, const vec3& rd, vec2 t){
@@ -48,9 +29,10 @@ vec2 trace(const vec3& ro, const vec3& rd, vec2 t){
 }
 
 vec3* trace(const vec3& ro, const vec3& rd, float e){
-	const float zmax = 10.0f;
+	const float zmax = 100.0f;
 	vec2 t = vec2(0.1f, zmax);
-	for(int i = 0; i < 60; i++){
+	if(!icontains(trace(ro, rd, t), 0.0f)) return nullptr;
+	for(int i = 1; i < 60; i++){
 		float th = icenter(t);
 		vec2 t0 = vec2(t.x, th);
 		vec2 d = trace(ro, rd, t0);
@@ -68,48 +50,12 @@ vec3* trace(const vec3& ro, const vec3& rd, float e){
 				return new vec3(ro + rd * icenter(t));
 			continue;
 		}
-		float depth = (t.y - t.x);
-		t.x += depth;
-		t.y += depth*2.0f;
+		float dd = (t.y - t.x);
+		t.x += dd;
+		t.y += dd*2.0f;
 		if(t.x >= zmax) return nullptr;
 	}
 	return nullptr;
-}
-
-void Paint(const vec2& X, const vec2& Y, float Z){
-	float cx = WIDTH * 0.5f;
-	float cy = HEIGHT * 0.5f;
-	int rmin = (Y.x + 1.0f) * cy;
-	int rmax = (Y.y + 1.0f) * cy;
-	int cmin = (X.x + 1.0f) * cx;
-	int cmax = (X.y + 1.0f) * cx;
-	for(int r = rmin; r < rmax; r++){
-		for(int c = cmin; c < cmax; c++){
-			depth[r][c] = Z;
-		}
-	}
-}
-
-void SubDivide(const mat4& IVP, const vec2& X, const vec2& Y, const float Z, int d, float e){
-	vec2* T = BeamCast(IVP, X, Y, vec2(Z, 1.0f), e);
-	if(d >= MAXDEPTH){
-		float depth = (T) ? icenter(*T) : Z*2.0f;
-		Paint(X, Y, depth);
-		delete T;
-	}
-	else if(T == nullptr) return;
-	else {
-		vec2 x1(X.x, icenter(X));
-		vec2 x2(x1.y, X.y);
-		vec2 y1(Y.x, icenter(Y));
-		vec2 y2(y1.y, Y.y);
-		float Z2 = T->x * 0.5f;
-		delete T;
-		SubDivide(IVP, x1, y1, Z2, d+1, e*0.5f);
-		SubDivide(IVP, x1, y2, Z2, d+1, e*0.5f);
-		SubDivide(IVP, x2, y1, Z2, d+1, e*0.5f);
-		SubDivide(IVP, x2, y2, Z2, d+1, e*0.5f);
-	}
 }
 
 int main(){
@@ -127,9 +73,8 @@ int main(){
     const float dx = 2.0f / (float)WIDTH;
 	const float dy = 2.0f / (float)HEIGHT;
 	
-	vec3 light_pos(2.0f, 2.0f, 2.0f);
-	vec3 L = normalize(light_pos);
-	vec3 ambient(0.1f, 0.05f, 0.05f);
+	vec3 ambient(0.001f, 0.0005f, 0.0005f);
+    vec3 light_pos(0.5f, 1.0f, 3.0f);
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
@@ -139,27 +84,42 @@ int main(){
         double dt = glfwGetTime() - t;
         t += dt;
         input.poll(dt, camera);
+        light_pos = camera.getEye();
         
-        //SubDivide(camera.getIVP(), {-1.0f, 1.0f}, {-1.0f, 1.0f}, 0.0f, 0, 0.1f);
-
-		#pragma omp parallel for num_threads(4) schedule(dynamic, 24)
+		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
 		for(int k = 0; k < WIDTH * HEIGHT; k++){
-			int r = k / WIDTH;
-			int c = k % WIDTH;
-			float x = c * dx - 1.0f;
-			float y = r * dy - 1.0f;
+			const int r = k / WIDTH;
+			const int c = k % WIDTH;
+			const float x = c * dx - 1.0f;
+			const float y = r * dy - 1.0f;
 			vec3 ro = camera.getEye();
 			vec3 rd = camera.getRay(x, y);
-			vec3* pos = trace(ro, rd, 0.001f);
-			if(pos){
-				vec3 normal = normalize(*pos);
-				vec3 V = normalize(camera.getEye() - *pos);
-				vec3 H = normalize(L + V);
-				float D = std::max(0.0f, dot(normal, L));
-				float S = pow(std::max(0.0f, dot(H, normal)), 16.0f);
-				vec3 color = ambient + (D * normal + S * light_color * normal) / distance(light_pos, *pos);
-				screen.setPixel(r*WIDTH + c, color);
-			}
+			vec3* pos = trace(ro, rd, 0.01f);
+			if(pos == nullptr) continue;
+			depths[r][c] = distance(ro, *pos) / 100.0f;
+		}
+		
+		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
+		for(int k = 0; k < WIDTH * HEIGHT; k++){
+			const int r = clamp(k / WIDTH, 1, HEIGHT-2);
+			const int c = clamp(k % WIDTH, 1, WIDTH-2);
+			const float x = c * dx - 1.0f;
+			const float y = r * dy - 1.0f;
+			if(depths[r][c] == 1.0f) continue;
+			vec3 pos = vec3(x, y, depths[r][c]);
+			vec3 N = normalize(vec3(depths[r][c+1] - depths[r][c-1],
+									depths[r+1][c] - depths[r-1][c],
+									0.5f));
+			vec4 lpos = camera.getV() * vec4(light_pos.xyz(), 1.0f);
+			vec3 L = normalize(lpos.xyz() - pos);
+			vec3 V = vec3(0.0f, 0.0f, 1.0f);
+			vec3 H = normalize(L + V);
+			const float D = std::max(0.0f, dot(N, L));
+			const float S = pow(std::max(0.0f, dot(H, N)), 16.0f);
+			const float dist2 = dot(lpos.xyz() - pos, lpos.xyz() - pos);
+			vec3 color = ambient + (D * base_color + S * light_color * base_color) / dist2;
+			color = pow(color, vec3(1.0f/2.2f));
+			screen.setPixel(r*WIDTH + c, color);
 		}
 		
 		screen.draw();
@@ -168,7 +128,7 @@ int main(){
     	screen.clear();
     	for(unsigned r = 0; r < HEIGHT; r++){
     	for(unsigned c = 0; c < WIDTH; c++){
-    		depth[r][c] = 1.0;
+    		depths[r][c] = 1.0f;
     	}}
     	
         i++;
