@@ -333,7 +333,17 @@ float icenter(vec2 v){
 	return (v.x + v.y) * 0.5f;
 }
 
+
+
 /*
+
+inline vec3 getNormal(const vec3& p){
+	vec2 ep = vec2(0.0, 0.001);
+	vec2 hx = map(iavec3(p + ep.yxx())) - map(iavec3(p - ep.yxx()));
+	vec2 hy = map(iavec3(p + ep.xyx())) - map(iavec3(p - ep.xyx()));
+	vec2 hz = map(iavec3(p + ep.xxy())) - map(iavec3(p - ep.xxy()));
+	return normalize(vec3(hx.x, hy.x, hz.x));
+}
 
 inline vec2 trace(const vec3& ro, const vec3& rd, vec2 t) {
 	mat3 r = iadd(ro, imul(rd, t));	

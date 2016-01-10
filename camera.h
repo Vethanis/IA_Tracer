@@ -18,7 +18,6 @@ inline glm::vec3 getForward(const glm::mat4& m){
 	return glm::vec3(-m[0][2], -m[1][2], -m[2][2]);
 }
 
-
 class Camera{
 	glm::mat4 P, V, IVP;
 	glm::vec3 m_eye, m_at;
@@ -62,10 +61,7 @@ public:
 		return glm::normalize(glm::vec3(temp) - m_eye);
 	}
 	inline glm::vec3 getPoint(float x, float y, float z){
-		glm::vec4 temp(x, y, z, 1.0f);
-		temp = IVP * temp;
-		temp = temp / temp.w;
-		return glm::vec3(temp);
+		return m_eye + getRay(x, y) * z;
 	}
 	inline void move(const glm::vec3& v){
 		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);

@@ -2,6 +2,7 @@
 #define ZPYRAMID_H
 
 #include <vector>
+#include <algorithm>
 #include "glm/glm.hpp"
 
 #ifdef DEBUG
@@ -27,6 +28,14 @@ class ZPyramid {
 public:
 	ZPyramid(int width, int height){
 		resize(width, height);
+	}	
+	inline double& operator()(int depth, float x, float y){
+		glm::ivec2 size = sizes[depth];
+		x = (x+1.0f) * 0.5f;
+		y = (y+1.0f) * 0.5f;
+		int c = x * (size.x - 1);
+		int r = y * (size.y - 1);
+		return buffer[depth][r][c];
 	}
 	inline int getMaxDepth(){ return max_depth; }
 	inline void resize(int width, int height){
@@ -44,14 +53,13 @@ public:
 			}
 		}
 	}
-	inline double& operator()(int depth, float x, float y){
-		glm::ivec2 size = sizes[depth];
-		x = (x+1.0f) * 0.5f;
-		y = (y+1.0f) * 0.5f;
-		int c = x * (size.x - 1);
-		int r = y * (size.y - 1);
-		return buffer[depth][r][c];
+	inline glm::vec3 getPoint(const glm::mat4& M, float x, float y){
+		glm::vec4 v(x, y, (*this)(max_depth, x, y), 1.0f);
+		v = M * v;
+		v = v / v.w;
+		return glm::vec3(v);
 	}
+
 #ifdef DEBUG
 	inline void debug(){
 		std::cout << buffer.size() << std::endl;

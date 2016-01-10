@@ -12,27 +12,29 @@
 using namespace std;
 using namespace glm;
 
+#define NEAR 0.1f
+#define FAR 10.0f
+
 //void subDivide(camera& cam, 
 
-int clamp(int a, int l, int h){
+inline int clamp(int a, int l, int h){
 	return std::max(std::min(a, h), l);
 }
 
-float distSquared(const glm::vec3& a, const glm::vec3& b){
+inline float distSquared(const glm::vec3& a, const glm::vec3& b){
 	return glm::dot(b - a, b - a);
 }
 
-vec2 map(const mat3& p){
-	return isphere4(p, {0.0f, 0.0f, 0.0f}, 1.0f);
+inline vec2 map(const mat3& p){
+	return isphere(p, {0.0f, 0.0f, 0.0f}, 1.0f);
 }
 
-vec2 trace(const vec3& ro, const vec3& rd, vec2 t){
+inline vec2 trace(const vec3& ro, const vec3& rd, vec2 t){
 	return map(iadd(ro, imul(rd, t)));
 }
 
 float trace(const vec3& ro, const vec3& rd, float e){
-	const float zmax = 100.0f;
-	vec2 t = vec2(0.1f, zmax);
+	vec2 t = vec2(NEAR, FAR);
 	if(!icontains(trace(ro, rd, t), 0.0f)) return -1.0f;
 	for(int i = 1; i < 60; i++){
 		float th = icenter(t);
@@ -55,7 +57,7 @@ float trace(const vec3& ro, const vec3& rd, float e){
 		float dd = (t.y - t.x);
 		t.x += dd;
 		t.y += dd*2.0f;
-		if(t.x >= zmax) return -1.0f;
+		if(t.x >= FAR) return -1.0f;
 	}
 	return -1.0f;
 }
@@ -78,19 +80,16 @@ int main(int argc, char* argv[]){
 	camera.setEye({0.0f, 0.0f, 3.0f});
 	camera.resize(WIDTH, HEIGHT);
 	camera.update();
-	mat4 IP = inverse(camera.getP());
-	
     
     const float dx = 2.0f / (float)WIDTH;
 	const float dy = 2.0f / (float)HEIGHT;
-	const float dz = (dx+dy)*0.5f / camera.getFar();
+	const float dz = (dx+dy)*0.5f / (camera.getFar() - camera.getNear());
 	const int pf = pyramid.getMaxDepth();
 	
 	vec3 ambient(0.001f, 0.0005f, 0.0005f);
-    vec3 light_pos(0.f, 0.f, 2.f);
+    vec3 light_pos(0.f, 2.f, 2.f);
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
-	
 	
 	input.poll();
     unsigned i = 0;
@@ -100,7 +99,7 @@ int main(int argc, char* argv[]){
         t += dt;
         input.poll(dt, camera);
 		const vec3 ro = camera.getEye();
-		const vec4 lpos = camera.getV() * vec4(light_pos, 1.0f);
+		light_pos = camera.getEye();
 		
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
 		for(int k = 0; k < WIDTH * HEIGHT; k++){
@@ -111,27 +110,24 @@ int main(int argc, char* argv[]){
 			vec3 rd = camera.getRay(x, y);
 			float t = trace(ro, rd, 0.001f);
 			if(t == -1.0f) continue;
-			pyramid(pf, x, y) = (double)t / (double)camera.getFar();
+			pyramid(pf, x, y) = (double)t;
 		}
 		
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
 		for(int k = 0; k < WIDTH * HEIGHT; k++){
 			const int r = clamp(k / WIDTH, 1, HEIGHT-2);
 			const int c = clamp(k % WIDTH, 1, WIDTH-2);
-			const double x = c * dx - 1.0f;
-			const double y = r * dy - 1.0f;
-			if(pyramid(pf, x, y) == 1.0f) continue;
-			vec4 pos = IP * vec4(x, y, pyramid(pf, x, y), 1.0);
-			pos = pos / pos.w;
-			vec3 N = normalize(vec3(pyramid(pf, x+dx, y) - pyramid(pf, x-dx, y),
-									pyramid(pf, x, y+dy) - pyramid(pf, x, y-dy),
-									dz / pyramid(pf, x, y)));
-			vec3 L = normalize(vec3( 0.0f, 0.0f, 1.0f));
+			const float x = c * dx - 1.0f;
+			const float y = r * dy - 1.0f;
+			const double z = pyramid(pf, x, y);
+			if(z == FAR) continue;
+			vec3 pos = camera.getPoint(x, y, z);
+			vec3 N = normalize(pos);
+			vec3 L = normalize(light_pos - pos);
 			vec3 H = normalize(L + vec3(0.0f, 0.0f, 1.0f));
 			const float D = std::max(0.0f, dot(N, L));
 			const float S = pow(std::max(0.0f, dot(H, N)), 32.0f);
-			float dist = pyramid(pf, x, y) * camera.getFar();
-			dist = 0.333f * dist * dist;
+			float dist = distSquared(light_pos, pos);
 			vec3 color = ambient + (D * base_color + S * light_color * base_color) / dist;
 			color = pow(color, vec3(1.0f/2.2f));
 			screen.setPixel(r*WIDTH + c, color);
@@ -141,7 +137,7 @@ int main(int argc, char* argv[]){
         glfwSwapBuffers(window.getWindow());    	
         glClear(GL_COLOR_BUFFER_BIT);
     	screen.clear();
-    	pyramid.clear(1.0);
+    	pyramid.clear(FAR);
     	
         i++;
         if(i >= 60){
