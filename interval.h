@@ -4,7 +4,6 @@
 #define GLM_SWIZZLE
 #include "glm/glm.hpp"
 
-
 /******************************************************************/
 /*                                                                */
 /* taken from nimitz and paniq: http://glslsandbox.com/e#29925.2  */
@@ -177,8 +176,7 @@ inline bool icontains(vec2 a, float v) {
 	return ((v >= a.x) && (v < a.y));
 }
 
-inline vec2 iabs(vec2 a)
-{
+inline vec2 iabs(vec2 a){
   if (a.x >= 0.0f)
       return a;
   if (a.y <= 0.0f) 
@@ -186,19 +184,16 @@ inline vec2 iabs(vec2 a)
   return vec2(0, max(-a.x, a.y));
 }
 
-inline vec2 ismoothmin(vec2 a, vec2 b, float r)
-{
+inline vec2 ismoothmin(vec2 a, vec2 b, float r){
 	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0f)));
 	return isub(imin(a, b), imul(ipow2(e), 0.25f/r));
 }
 
-inline vec2 ismoothmax(vec2 a, vec2 b, float r)
-{
+inline vec2 ismoothmax(vec2 a, vec2 b, float r){
 	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0f)));
 	return iadd(imax(a, b), imul(ipow2(e), 0.25f/r));
 }
-inline mat3 icross(const mat3& a, const vec3& b)
-{
+inline mat3 icross(const mat3& a, const vec3& b){
     return iavec3(
         isub(imul(b.z, a[1].xy()), imul(b.y, a[2].xy())),
 	    isub(imul(b.x, a[2].xy()), imul(b.z, a[0].xy())),
@@ -206,8 +201,7 @@ inline mat3 icross(const mat3& a, const vec3& b)
     );
 }
 
-inline mat3 icross(const vec3& a, const mat3& b)
-{
+inline mat3 icross(const vec3& a, const mat3& b){
     return iavec3(
         isub(imul(a.y, b[2].xy()), imul(a.z, b[1].xy())),
 	    isub(imul(a.z, b[0].xy()), imul(a.x, b[2].xy())),
@@ -215,8 +209,7 @@ inline mat3 icross(const vec3& a, const mat3& b)
     );
 }
 
-inline mat3 icross(const mat3& a, const mat3& b)
-{
+inline mat3 icross(const mat3& a, const mat3& b){
     return iavec3(
         isub(imul(a[1].xy(), b[2].xy()), imul(a[2].xy(), b[1].xy())),
 	    isub(imul(a[2].xy(), b[0].xy()), imul(a[0].xy(), b[2].xy())),
@@ -224,33 +217,28 @@ inline mat3 icross(const mat3& a, const mat3& b)
     );
 }
 
-inline mat3 irotateQuat(const vec4& q, const mat3& v)
-{
+inline mat3 irotateQuat(const vec4& q, const mat3& v){
     mat3 uv = icross(q.xyz(), v);
     mat3 uuv = icross(q.xyz(), uv);
     //v + ((uv * q.w) + uuv) * static_cast<T>(2);
     return iadd(v, imul(2.0f, iadd(imul(q.w, uv), uuv)));
 }
 
-inline vec4 quatNormalize(const vec4& q)
-{
+inline vec4 quatNormalize(const vec4& q){
 	return q/length(q);
 }
 
-inline vec4 angleAxis(float a, const vec3& v)
-{
+inline vec4 angleAxis(float a, const vec3& v){
 	return vec4(v * sin(a * 0.5f), cos(a * 0.5f));
 }
 
 
-inline vec2 isdBox(const mat3& p, const vec3& b)
-{
+inline vec2 isdBox(const mat3& p, const vec3& b){
   vec2 dx = isub(iabs(p[0].xy()), vec2(b.x));
   vec2 dy = isub(iabs(p[1].xy()), vec2(b.y));
   vec2 dz = isub(iabs(p[2].xy()), vec2(b.z));
   
   return imax(dx, imax(dy, dz));
-
 }
 
 // split interval into two intervals
@@ -347,22 +335,19 @@ float icenter(vec2 v){
 
 /*
 
-inline vec2 trace(const vec3& ro, const vec3& rd, vec2 t) 
-{
+inline vec2 trace(const vec3& ro, const vec3& rd, vec2 t) {
 	mat3 r = iadd(ro, imul(rd, t));	
 	return map(r);
 }
 
-inline vec3 trace(const vec3& ro, const vec3& rd)
-{
+inline vec3 trace(const vec3& ro, const vec3& rd){
 	float e = 0.01f;
 	const float maxt = 10.f;
 	
 	vec2 t = vec2(2.f, maxt);
 	bool hit = false;
 	
-	for (int i = 0; i < 60; ++i)
-	{
+	for (int i = 0; i < 60; ++i){
 		float th = (t.x+t.y)*.5f;
 		
 		vec2 t0 = vec2(t.x, th);
@@ -371,26 +356,21 @@ inline vec3 trace(const vec3& ro, const vec3& rd)
 		vec2 d0 = trace(ro, rd, t0);
 		vec2 d1 = trace(ro, rd, t1);
 		
-		if (icontains(d0, 0.0f))
-		{
+		if (icontains(d0, 0.0f)){
 			t.y = th;
-			if (max(abs(d0.y),abs(d0.x)) < e)
-			{
+			if (max(abs(d0.y),abs(d0.x)) < e){
 				hit = true;
 				break;
 			}
 		}
-		else if (icontains(d1, 0.0f))
-		{
+		else if (icontains(d1, 0.0f)){
 			t.x = th;
-			if (max(abs(d0.y),abs(d0.x)) < e)
-			{
+			if (max(abs(d0.y),abs(d0.x)) < e){
 				hit = true;
 				break;
 			}
 		}
-		else
-		{
+		else{
 			float d = (t.y-t.x);
 			t.x += d;
 			t.y += d*2.0f;
@@ -400,8 +380,7 @@ inline vec3 trace(const vec3& ro, const vec3& rd)
 	
 	vec3 col = vec3(0.0f);
 	
-	if (hit) 
-	{
+	if (hit) {
 		float th = (t.x+t.y)*0.5f;
 		vec3 p = (ro+rd*th);
 		vec3 n = normal(p);
@@ -420,8 +399,7 @@ inline vec3 trace(const vec3& ro, const vec3& rd)
 }
 
 
-vec2 map(mat3 p) 
-{
+vec2 map(mat3 p) {
 	p = irotateQuat(angleAxis(PI * 0.3, vec3(1.0,0.0,0.0)), p);
 	vec2 x = isqrt(iadd(ipow2(p[0].xy),ipow2(p[1].xy)));
 	vec2 d = iadd(imul(tri(imul(x - time * 0.5,5.0)),0.2),imul(icos(imul(x - time * 0.1,2.0)),0.5));
@@ -430,8 +408,7 @@ vec2 map(mat3 p)
 	return imax(-w.yx,iabs(isub(p[2].xy, d)) - 0.02);
 }
 
-void main()
-{
+void main(){
 	vec2 p = gl_FragCoord.xy / resolution.xy-0.5;
 	float asp = resolution.x/resolution.y;
 	p.x *= asp;

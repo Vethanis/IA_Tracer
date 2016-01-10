@@ -9,12 +9,8 @@
 #include "zpyramid.h"
 #include "omp.h"
 
-
 using namespace std;
 using namespace glm;
-
-#define WIDTH 1280
-#define HEIGHT 720
 
 //void subDivide(camera& cam, 
 
@@ -64,22 +60,30 @@ float trace(const vec3& ro, const vec3& rd, float e){
 	return -1.0f;
 }
 
-int main(){
+int main(int argc, char* argv[]){
+	if(argc < 3){
+		cout << argv[0] << " <screen width> <screen height>" << endl;
+		return 1;
+	}
+	int WIDTH = atoi(argv[1]);
+	int HEIGHT = atoi(argv[2]);
 	Window window(WIDTH, HEIGHT, 3, 3, "IA Beam Casting");
 	Input input(window.getWindow());
 	GLProgram prog("shader.vert", "shader.frag");
-	Camera camera;
-	camera.setEye({0.0f, 0.0f, 1.0f});
-	camera.update();
+	prog.bind();
 	GLScreen screen(WIDTH, HEIGHT);
-	
 	ZPyramid pyramid(WIDTH, HEIGHT);
 	
-	prog.bind();
+	Camera camera;
+	camera.setEye({0.0f, 0.0f, 3.0f});
+	camera.resize(WIDTH, HEIGHT);
+	camera.update();
+	mat4 IP = inverse(camera.getP());
+	
     
     const float dx = 2.0f / (float)WIDTH;
 	const float dy = 2.0f / (float)HEIGHT;
-	const float dz = (dx+dy)*0.5f / 100.0f;
+	const float dz = (dx+dy)*0.5f / camera.getFar();
 	const int pf = pyramid.getMaxDepth();
 	
 	vec3 ambient(0.001f, 0.0005f, 0.0005f);
@@ -87,7 +91,6 @@ int main(){
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
-	mat4 IP = inverse(camera.getP());
 	
 	input.poll();
     unsigned i = 0;
@@ -108,7 +111,7 @@ int main(){
 			vec3 rd = camera.getRay(x, y);
 			float t = trace(ro, rd, 0.001f);
 			if(t == -1.0f) continue;
-			pyramid(pf, x, y) = t / 100.0;
+			pyramid(pf, x, y) = (double)t / (double)camera.getFar();
 		}
 		
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
@@ -122,12 +125,13 @@ int main(){
 			pos = pos / pos.w;
 			vec3 N = normalize(vec3(pyramid(pf, x+dx, y) - pyramid(pf, x-dx, y),
 									pyramid(pf, x, y+dy) - pyramid(pf, x, y-dy),
-									dz));
+									dz / pyramid(pf, x, y)));
 			vec3 L = normalize(vec3( 0.0f, 0.0f, 1.0f));
 			vec3 H = normalize(L + vec3(0.0f, 0.0f, 1.0f));
 			const float D = std::max(0.0f, dot(N, L));
 			const float S = pow(std::max(0.0f, dot(H, N)), 32.0f);
-			float dist = sqrt(dot(pos.xyz(), pos.xyz()));
+			float dist = pyramid(pf, x, y) * camera.getFar();
+			dist = 0.333f * dist * dist;
 			vec3 color = ambient + (D * base_color + S * light_color * base_color) / dist;
 			color = pow(color, vec3(1.0f/2.2f));
 			screen.setPixel(r*WIDTH + c, color);
