@@ -69,15 +69,15 @@ public:
 	// input: mat3 of vec2s minmax pairs: 0:U 1:V 2:T
 	// output: mat4 of vec3s: 0:bln, 1:blf, 2:trn, 3:trf
 	inline glm::mat4 getPoints(const glm::mat3& in)const{
-		printf("getPoints input\n"); print(in);
+		//printf("getPoints input\n"); print(in);
 		glm::vec3 bln = getPoint({in[0].x, in[1].x}, in[2].x);
 		glm::vec3 blf = getPoint({in[0].x, in[1].x}, in[2].y);
 		glm::vec3 trn = getPoint({in[0].y, in[1].y}, in[2].x);
 		glm::vec3 trf = getPoint({in[0].y, in[1].y}, in[2].y);
-		printf("bln: "); print(bln);
-		printf("blf: "); print(blf);
-		printf("trn: "); print(trn);
-		printf("trf: "); print(trf);
+		//printf("bln: "); print(bln);
+		//printf("blf: "); print(blf);
+		//printf("trn: "); print(trn);
+		//printf("trf: "); print(trf);
 		return glm::mat4(glm::vec4(bln, 1.0f), glm::vec4(blf, 1.0f),
 						 glm::vec4(trn, 1.0f), glm::vec4(trf, 1.0f));
 	}

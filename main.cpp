@@ -15,7 +15,7 @@ using namespace std;
 using namespace glm;
 
 #define NEAR 0.1f
-#define FAR 10.0f
+#define FAR 20.0f
 
 inline vec2 map(const mat3& p){
 	return isphere4(p, {0.0f, 0.0f, 0.0f}, 1.0f);
@@ -60,7 +60,7 @@ vec2 trace(const mat4& uvt, const vec2& t){
 	if(p[0].x > p[0].y) std::swap(p[0].x, p[0].y);
 	if(p[1].x > p[1].y) std::swap(p[1].x, p[1].y);
 	if(p[2].x > p[2].y) std::swap(p[2].x, p[2].y);
-	cout << "P: \n"; print(p);
+	//cout << "B: \n"; print(p);
 	return map(p);
 }
 
@@ -71,7 +71,7 @@ vec2 trace(const mat4& uvt, float e){
 		float th = icenter(t);
 		vec2 t0 = vec2(t.x, th);
 		vec2 d = trace(uvt, t0);
-		cout << "F(B): "; print(d);
+		//cout << "F(B): "; print(d);
 		if(icontains(d, 0.0f)){
 			t.y = th;
 			if(t.y - t.x < e)
@@ -80,14 +80,14 @@ vec2 trace(const mat4& uvt, float e){
 		}
 		t0 = vec2(th, t.y);
 		d = trace(uvt, t0);
-		cout << "F(B): "; print(d);
+		//cout << "F(B): "; print(d);
 		if(icontains(d, 0.0f)){
 			t.x = th;
 			if(t.y - t.x  < e)
 				return t;
 			continue;
 		}
-		if(t.x > 1.0f) return vec2(10.0f, 10.0f);
+		return vec2(10.0f, 10.0f);
 	}
 	return vec2(10.0f, 10.0f);
 }
@@ -109,12 +109,13 @@ void split(std::vector<glm::mat3>& s, const glm::mat3& m){
 void subdivide(const Camera& cam, ZPyramid& pyr, int i, float e){
 	vec4 uv((i & 1) ? vec2( 0.0f, 1.0f) : vec2(-1.0f, 0.0f),
 			(i & 2) ? vec2(-1.0f, 0.0f) : vec2( 0.0f, 1.0f));
-	cout << "UV: "; print(uv);
+	//cout << "UV: "; print(uv);
 	int depth = 1;
-	const int max_depth = pyr.getMaxDepth();
+	const int max_depth = 4;//pyr.getMaxDepth();
 	vector<mat3> stack;
 	stack.push_back(iavec3(uv.xy(), uv.zw(), {cam.getNear(), pyr(depth, {0.0f, 0.0f})} ));
 	while(depth <= max_depth && !stack.empty()){
+		//cout << "DEPTH : " << depth << endl;
 		mat3 uvt = stack.back();
 		stack.pop_back();
 		//cout << "UVT: \n"; print(uvt);
@@ -161,8 +162,8 @@ int main(int argc, char* argv[]){
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
-	subdivide(camera, pyramid, 0, 0.1f);
-	return 0;
+	//subdivide(camera, pyramid, 0, 1.0f);
+	//return 0;
 	
 	input.poll();
     unsigned i = 0;
