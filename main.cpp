@@ -8,6 +8,7 @@
 #include "glscreen.h"
 #include "zpyramid.h"
 #include "glm/gtx/compatibility.hpp"
+#include "glmprint.h"
 #include "omp.h"
 
 using namespace std;
@@ -18,10 +19,6 @@ using namespace glm;
 
 inline vec2 map(const mat3& p){
 	return isphere4(p, {0.0f, 0.0f, 0.0f}, 1.0f);
-}
-
-inline float distSquared(const glm::vec3& a, const glm::vec3& b){
-	return glm::dot(b - a, b - a);
 }
 
 inline vec2 trace(const vec3& ro, const vec3& rd, vec2 t){
@@ -57,69 +54,83 @@ float trace(const vec3& ro, const vec3& rd, float e){
 	return -1.0f;
 }
 
+// mat4: bln, blf, trn, trf
 vec2 trace(const mat4& uvt, const vec2& t){
-	return map(iavec3(lerp(uvt[0].xyz(), uvt[1].xyz(), t.x), lerp(uvt[2].xyz(), uvt[3].xyz(), t.y)));
+	mat3 p = iavec3(lerp(uvt[0].xyz(), uvt[1].xyz(), t.x), lerp(uvt[2].xyz(), uvt[3].xyz(), t.y));
+	if(p[0].x > p[0].y) std::swap(p[0].x, p[0].y);
+	if(p[1].x > p[1].y) std::swap(p[1].x, p[1].y);
+	if(p[2].x > p[2].y) std::swap(p[2].x, p[2].y);
+	cout << "P: \n"; print(p);
+	return map(p);
 }
 
+// returns lerp target between 0 and 1 for near and far lerps
 vec2 trace(const mat4& uvt, float e){
 	vec2 t = vec2(0.0f, 1.0f);
 	for(int i = 1; i < 60; i++){
 		float th = icenter(t);
 		vec2 t0 = vec2(t.x, th);
 		vec2 d = trace(uvt, t0);
+		cout << "F(B): "; print(d);
 		if(icontains(d, 0.0f)){
 			t.y = th;
-			if(std::max(abs(d.x), abs(d.y)) < e)
+			if(t.y - t.x < e)
 				return t;
 			continue;
 		}
 		t0 = vec2(th, t.y);
 		d = trace(uvt, t0);
+		cout << "F(B): "; print(d);
 		if(icontains(d, 0.0f)){
 			t.x = th;
-			if(std::max(abs(d.x), abs(d.y)) < e)
+			if(t.y - t.x  < e)
 				return t;
 			continue;
 		}
-		float dd = (t.y - t.x);
-		t.x += dd;
-		t.y += dd*2.0f;
-		if(t.x >= FAR) return vec2(0.0f, 1.0f);
+		if(t.x > 1.0f) return vec2(10.0f, 10.0f);
 	}
-	return vec2(0.0f, 1.0f);
+	return vec2(10.0f, 10.0f);
 }
 
 void split(std::vector<glm::mat3>& s, const glm::mat3& m){
-	const vec2 min = m[0].xy();
-	const vec2 max = m[1].xy();
-	const vec2 t   = m[2].xy();
-	const vec2 c   = icenter(min, max);
-	s.push_back(iavec3({min.x, c.y}, {c.x, max.y}, t));
-	s.push_back(iavec3(c, max, t));
-	s.push_back(iavec3(min, c, t));
-	s.push_back(iavec3({c.x, min.y}, {max.x, c.y}, t));
+	//cout << "Split called!\n";
+	float xmin = m[0].x;
+	float xmax = m[0].y;
+	float ymin = m[1].x;
+	float ymax = m[1].y;
+	float cx = 0.5f*(xmin+xmax);
+	float cy = 0.5f*(ymin+ymax);
+	s.push_back(iavec3({xmin, cx}, {ymin, cy}, m[2].xy()));
+	s.push_back(iavec3({cx, xmax}, {ymin, cy}, m[2].xy()));
+	s.push_back(iavec3({xmin, cx}, {cy, ymax}, m[2].xy()));
+	s.push_back(iavec3({cx, xmax}, {cy, ymax}, m[2].xy()));
 }
 
-void subDivide(const Camera& cam, ZPyramid& pyr, float e){
-	int depth = 0;
+void subdivide(const Camera& cam, ZPyramid& pyr, int i, float e){
+	vec4 uv((i & 1) ? vec2( 0.0f, 1.0f) : vec2(-1.0f, 0.0f),
+			(i & 2) ? vec2(-1.0f, 0.0f) : vec2( 0.0f, 1.0f));
+	cout << "UV: "; print(uv);
+	int depth = 1;
 	const int max_depth = pyr.getMaxDepth();
 	vector<mat3> stack;
-	stack.push_back(iavec3({-1.0f, 1.0f}, {-1.0f, 1.0f}, {cam.getNear(), pyr(depth, {0.0f, 0.0f})} ));
+	stack.push_back(iavec3(uv.xy(), uv.zw(), {cam.getNear(), pyr(depth, {0.0f, 0.0f})} ));
 	while(depth <= max_depth && !stack.empty()){
-		vec2 t = trace(cam.getPoints(stack.back()), e);
-		auto uvt = stack.back();
+		mat3 uvt = stack.back();
 		stack.pop_back();
-		float tmax = pyr(depth, icenter(uvt[0].xy(), uvt[1].xy()));
-		if(t.y < tmax){
-			uvt[2].xy() = t;
+		//cout << "UVT: \n"; print(uvt);
+		uvt[2] = vec3(trace(cam.getPoints(uvt), e) * (cam.getFar() - cam.getNear()), 0.0f);
+		if(uvt[2].y < pyr(depth, icenter(uvt[0].xy(), uvt[1].xy())) ){
 			pyr.paint(depth, uvt);
-			depth++;
-			split(stack, uvt);
 			e = e * 0.5f;
+			depth++;
+			if(depth <= max_depth)
+				split(stack, uvt);
 		}
-		else
-			return;
 	}
+}
+
+inline float distSquared(const glm::vec3& a, const glm::vec3& b){
+	return glm::dot(b - a, b - a);
 }
 
 int main(int argc, char* argv[]){
@@ -137,6 +148,7 @@ int main(int argc, char* argv[]){
 	prog.bind();
 	GLScreen screen(WH.x, WH.y);
 	ZPyramid pyramid(WH.x, WH.y);
+	pyramid.clear(FAR);
 	const int pf = pyramid.getMaxDepth();
 	
 	Camera camera;
@@ -149,6 +161,9 @@ int main(int argc, char* argv[]){
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
+	subdivide(camera, pyramid, 0, 0.1f);
+	return 0;
+	
 	input.poll();
     unsigned i = 0;
     float t = glfwGetTime();
@@ -160,6 +175,7 @@ int main(int argc, char* argv[]){
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
 			light_pos = ro;
 		
+		/*
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
 		for(int k = 0; k < WH.x*WH.y; k++){
 			const int c = k % WH.x;
@@ -169,6 +185,12 @@ int main(int argc, char* argv[]){
 			float t = trace(ro, rd, 0.001f);
 			if(t == -1.0f) continue;
 			pyramid(pf, xy) = t;
+		}
+		*/
+		
+		#pragma omp parallel for num_threads(4) schedule(static, 1)
+		for(int k = 0; k < 4; k++){
+			subdivide(camera, pyramid, k, 0.1f);
 		}
 		
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
