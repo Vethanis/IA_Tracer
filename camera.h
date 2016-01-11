@@ -50,20 +50,26 @@ public:
 	}
 	inline const glm::vec3& getEye(){return m_eye;}
 	inline const glm::vec3& getAt(){return m_at;}
-	inline float getNear(){return m_near;}
-	inline float getFar(){return m_far;}
-	inline float getFov(){return m_fov;}
+	inline float getNear()const{return m_near;}
+	inline float getFar()const{return m_far;}
+	inline float getFov()const{return m_fov;}
 	inline void setEye(const glm::vec3& eye){m_eye = eye;}
 	// returns world ray from canonical screen coords
-	inline glm::vec3 getRay(float x, float y){
-		glm::vec4 temp(x, y, 0.0f, 1.0f);
+	inline glm::vec3 getRay(const glm::vec2& uv)const{
+		glm::vec4 temp(uv, 0.0f, 1.0f);
 		temp = IVP * temp;
 		temp = temp / temp.w;
 		return glm::normalize(glm::vec3(temp) - m_eye);
 	}
 	// returns world coords, x and y are in canonical screen space, z is linear
-	inline glm::vec3 getPoint(float x, float y, float z){
-		return m_eye + getRay(x, y) * z;
+	inline glm::vec3 getPoint(const glm::vec2& uv, float z)const{
+		return m_eye + getRay(uv) * z;
+	}
+	inline glm::mat4 getPoints(const glm::mat3& in)const{
+		return glm::mat4(glm::vec4(getPoint({in[0].x, in[1].x}, in[2].x), 0.0f), 
+						 glm::vec4(getPoint({in[0].x, in[1].x}, in[2].y), 0.0f),
+						 glm::vec4(getPoint({in[0].y, in[1].y}, in[2].x), 0.0f),
+						 glm::vec4(getPoint({in[0].y, in[1].y}, in[2].y), 0.0f));
 	}
 	inline void move(const glm::vec3& v){
 		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
@@ -76,12 +82,12 @@ public:
 		m_yaw -= amt;
 		m_yaw = fmod(m_yaw, 360.0f);
 	}
-	inline glm::mat4 getVP(){
+	inline glm::mat4 getVP()const{
 		return P * V;
 	}
 	inline const glm::mat4& getV(){return V;}
 	inline const glm::mat4& getP(){return P;}
 	inline const glm::mat4& getIVP(){ return IVP;}
-	inline const glm::vec3 getAxis(){ return normalize(m_at - m_eye);}
+	inline const glm::vec3 getAxis()const{ return normalize(m_at - m_eye);}
 };
 #endif

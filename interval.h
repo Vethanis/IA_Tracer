@@ -19,7 +19,11 @@ inline mat3 iavec3(vec2 x, vec2 y, vec2 z) {
 }
 
 inline mat3 iavec3(const vec3& p) {
-	return mat3(vec3(p.x, p.x, 0.0f), vec3(p.x, p.x, 0.0f), vec3(p.z, p.z, 0.0f));
+	return mat3(vec3(p.x, p.x, 0.0f), vec3(p.y, p.y, 0.0f), vec3(p.z, p.z, 0.0f));
+}
+
+inline mat3 iavec3(const vec3& l, const vec3& h){
+	return mat3(vec3(l.x, h.x, 0.0f), vec3(l.y, h.y, 0.0f), vec3(l.z, h.z, 0.0f));
 }
 
 inline vec2 imin(vec2 a, vec2 b) {
@@ -331,6 +335,10 @@ inline vec2 isphere64(const mat3& p, const vec3& c, float r){
 
 float icenter(vec2 v){
 	return (v.x + v.y) * 0.5f;
+}
+
+vec2 icenter(vec2 u, vec2 v){
+	return (u + v) * 0.5f;
 }
 
 
