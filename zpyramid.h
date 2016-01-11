@@ -10,7 +10,7 @@
 #endif
 
 class ZPyramid {
-	std::vector<std::vector<std::vector<double> > > buffer;
+	std::vector<std::vector<std::vector<float> > > buffer;
 	std::vector<glm::ivec2> sizes;
 	int max_depth;
 	inline void setSizes(int width, int height){
@@ -29,7 +29,7 @@ public:
 	ZPyramid(int width, int height){
 		resize(width, height);
 	}	
-	inline double& operator()(int depth, float x, float y){
+	inline float& operator()(int depth, float x, float y){
 		glm::ivec2 size = sizes[depth];
 		x = (x+1.0f) * 0.5f;
 		y = (y+1.0f) * 0.5f;
@@ -42,10 +42,10 @@ public:
 		setSizes(width, height);
 		buffer.clear();
 		for(const auto& i : sizes){
-			buffer.push_back(std::vector<std::vector<double> >(i.y, std::vector<double> (i.x, 1.0)));
+			buffer.push_back(std::vector<std::vector<float> >(i.y, std::vector<float> (i.x, 1.0)));
 		}
 	}
-	inline void clear(double val){
+	inline void clear(float val){
 		for(auto& d : buffer){
 			for(auto& r : d){
 				for(auto& c : r)

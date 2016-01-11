@@ -54,12 +54,14 @@ public:
 	inline float getFar(){return m_far;}
 	inline float getFov(){return m_fov;}
 	inline void setEye(const glm::vec3& eye){m_eye = eye;}
+	// returns world ray from canonical screen coords
 	inline glm::vec3 getRay(float x, float y){
 		glm::vec4 temp(x, y, 0.0f, 1.0f);
 		temp = IVP * temp;
 		temp = temp / temp.w;
 		return glm::normalize(glm::vec3(temp) - m_eye);
 	}
+	// returns world coords, x and y are in canonical screen space, z is linear
 	inline glm::vec3 getPoint(float x, float y, float z){
 		return m_eye + getRay(x, y) * z;
 	}

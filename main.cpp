@@ -26,7 +26,7 @@ inline float distSquared(const glm::vec3& a, const glm::vec3& b){
 }
 
 inline vec2 map(const mat3& p){
-	return isphere(p, {0.0f, 0.0f, 0.0f}, 1.0f);
+	return isphere16(p, {0.0f, 0.0f, 0.0f}, 1.0f);
 }
 
 inline vec2 trace(const vec3& ro, const vec3& rd, vec2 t){
@@ -83,23 +83,21 @@ int main(int argc, char* argv[]){
     
     const float dx = 2.0f / (float)WIDTH;
 	const float dy = 2.0f / (float)HEIGHT;
-	const float dz = (dx+dy)*0.5f / (camera.getFar() - camera.getNear());
 	const int pf = pyramid.getMaxDepth();
 	
 	vec3 ambient(0.001f, 0.0005f, 0.0005f);
-    vec3 light_pos(0.f, 2.f, 2.f);
+    vec3 light_pos(2.f, 2.f, 2.f);
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
 	input.poll();
     unsigned i = 0;
-    double t = glfwGetTime();
+    float t = glfwGetTime();
     while (!glfwWindowShouldClose(window.getWindow())){
-        double dt = glfwGetTime() - t;
+        float dt = glfwGetTime() - t;
         t += dt;
         input.poll(dt, camera);
 		const vec3 ro = camera.getEye();
-		light_pos = camera.getEye();
 		
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
 		for(int k = 0; k < WIDTH * HEIGHT; k++){
@@ -110,21 +108,23 @@ int main(int argc, char* argv[]){
 			vec3 rd = camera.getRay(x, y);
 			float t = trace(ro, rd, 0.001f);
 			if(t == -1.0f) continue;
-			pyramid(pf, x, y) = (double)t;
+			pyramid(pf, x, y) = (float)t;
 		}
 		
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
 		for(int k = 0; k < WIDTH * HEIGHT; k++){
 			const int r = clamp(k / WIDTH, 1, HEIGHT-2);
-			const int c = clamp(k % WIDTH, 1, WIDTH-2);
+			const int c = clamp(k % WIDTH, 1, WIDTH -2);
 			const float x = c * dx - 1.0f;
 			const float y = r * dy - 1.0f;
-			const double z = pyramid(pf, x, y);
+			const float z = pyramid(pf, x, y);
 			if(z == FAR) continue;
 			vec3 pos = camera.getPoint(x, y, z);
-			vec3 N = normalize(pos);
+			vec3 ddx = camera.getPoint(x+dx, y, pyramid(pf, x+dx, y)) - pos;
+			vec3 ddy = camera.getPoint(x, y+dy, pyramid(pf, x, y+dy)) - pos;
+			vec3 N = normalize(cross(ddx, ddy));
 			vec3 L = normalize(light_pos - pos);
-			vec3 H = normalize(L + vec3(0.0f, 0.0f, 1.0f));
+			vec3 H = normalize(L + normalize(ro - pos));
 			const float D = std::max(0.0f, dot(N, L));
 			const float S = pow(std::max(0.0f, dot(H, N)), 32.0f);
 			float dist = distSquared(light_pos, pos);
