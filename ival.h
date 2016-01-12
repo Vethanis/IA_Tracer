@@ -9,8 +9,8 @@
 struct ival{
 	float l, h;
 	ival() : l(0.0f), h(0.0f){};
-	ival(float a, float b) : l(std::min(a, b)), h(std::min(a, b)){};
-	ival(const ival& other) : l(other.h), h(other.h){};
+	ival(float a, float b) : l(std::min(a, b)), h(std::max(a, b)){};
+	ival(const ival& other) : l(other.l), h(other.h){};
 	inline ival& operator=(ival other){
 		l = other.l; h = other.h; return *this;
 	}

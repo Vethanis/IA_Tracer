@@ -55,7 +55,9 @@ void getStartingUVs(unsigned threads, std::vector<ival2>& uvs){
 		unsigned c = i % xres;
 		float xmin = -1.0f + c * dx;
 		float ymin = -1.0f + r * dy;
-		uvs.push_back({xmin, xmin+dx, ymin, ymin+dy});
+		printf("xmin: %.3f, xmax: %.3f, ymin: %.3f, ymax: %.3f\n", xmin, xmin+dx, ymin, ymin+dy);
+		uvs.push_back(ival2(xmin, xmin+dx, ymin, ymin+dy));
+		print(uvs.back());
 	}
 }
 
