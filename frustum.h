@@ -49,15 +49,14 @@ void getStartingUVs(unsigned threads, std::vector<ival2>& uvs){
 	unsigned yres = 1 << divy;
 	const float dx = 2.0f / xres;
 	const float dy = 2.0f / yres;
-	printf("xres: %u, yres: %u, dx: %.3f, dy: %.3f\n", xres, yres, dx, dy);
+	//printf("xres: %u, yres: %u, dx: %.3f, dy: %.3f\n", xres, yres, dx, dy);
 	for(unsigned i = 0; i < p; i++){
 		unsigned r = yres*i / p;
 		unsigned c = i % xres;
 		float xmin = -1.0f + c * dx;
 		float ymin = -1.0f + r * dy;
-		printf("xmin: %.3f, xmax: %.3f, ymin: %.3f, ymax: %.3f\n", xmin, xmin+dx, ymin, ymin+dy);
 		uvs.push_back(ival2(xmin, xmin+dx, ymin, ymin+dy));
-		print(uvs.back());
+		//print(uvs.back());
 	}
 }
 

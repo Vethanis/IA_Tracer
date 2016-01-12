@@ -55,7 +55,10 @@ ival* trace(const Camera& c, const SubArgs& args){
 				return new ival(t);
 			continue;
 		}
-		return nullptr;
+		float dd = t.center();
+		t.l += dd;
+		t.h += dd*2.0f;
+		if(t.h >= args.uvt.z.h) return nullptr;
 	}
 	return nullptr;
 }
@@ -110,8 +113,6 @@ int main(int argc, char* argv[]){
 	
 	std::vector<ival2> uvs;
 	getStartingUVs(threads, uvs);
-	for(const auto& a : uvs)
-		print(a);
 
 	const float dx = 2.0f / WIDTH;
 	const float dy = 2.0f / HEIGHT;
@@ -134,8 +135,8 @@ int main(int argc, char* argv[]){
 	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
 	
-	subdivide(threads, camera, pyramid, uvs[0], 0.1f);
-	return 0;
+	//subdivide(threads, camera, pyramid, uvs[0], 0.1f);
+	//return 0;
 	
 	input.poll();
     unsigned i = 0;
@@ -160,7 +161,7 @@ int main(int argc, char* argv[]){
 			const float x = c*dx - 1.0f;
 			const float y = r*dy - 1.0f;
 			const float z = pyramid(pf, x, y);
-			if(z == FAR) continue;
+			if(z == 1.0f) continue;
 			vec3 pos = camera.getPoint(x, y, z);
 			vec3 xv = camera.getPoint(x+dx, y, pyramid(pf, x+dx, y)) - pos;
 			vec3 yv = camera.getPoint(x, y+dy, pyramid(pf, x, y+dy)) - pos;
