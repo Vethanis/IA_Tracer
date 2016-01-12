@@ -1,5 +1,5 @@
 #include "myglheaders.h"
-#include "interval.h"
+#include "ival.h"
 #include <iostream>
 #include "window.h"
 #include "input.h"
@@ -9,6 +9,7 @@
 #include "zpyramid.h"
 #include "glm/gtx/compatibility.hpp"
 #include "glmprint.h"
+#include "frustum.h"
 #include "omp.h"
 
 using namespace std;
@@ -17,102 +18,93 @@ using namespace glm;
 #define NEAR 0.1f
 #define FAR 20.0f
 
-inline vec2 map(const mat3& p){
+inline ival map(const ival3& p){
 	return isphere4(p, {0.0f, 0.0f, 0.0f}, 1.0f);
 }
 
-inline vec2 trace(const vec3& ro, const vec3& rd, vec2 t){
-	return map(iadd(ro, imul(rd, t)));
+inline ival trace(const Frustum& f, ival t){
+	return map(f.getInterval(t));
 }
 
-float trace(const vec3& ro, const vec3& rd, float e){
-	vec2 t = vec2(NEAR, FAR);
-	if(!icontains(trace(ro, rd, t), 0.0f)) return -1.0f;
-	for(int i = 1; i < 60; i++){
-		float th = icenter(t);
-		vec2 t0 = vec2(t.x, th);
-		vec2 d = trace(ro, rd, t0);
-		if(icontains(d, 0.0f)){
-			t.y = th;
-			if(std::max(abs(d.x), abs(d.y)) < e)
-				return icenter(t);
-			continue;
-		}
-		t0 = vec2(th, t.y);
-		d = trace(ro, rd, t0);
-		if(icontains(d, 0.0f)){
-			t.x = th;
-			if(std::max(abs(d.x), abs(d.y)) < e)
-				return icenter(t);
-			continue;
-		}
-		float dd = (t.y - t.x);
-		t.x += dd;
-		t.y += dd*2.0f;
-		if(t.x >= FAR) return -1.0f;
-	}
-	return -1.0f;
-}
-
-// mat4: bln, blf, trn, trf
-vec2 trace(const mat4& uvt, const vec2& t){
-	mat3 p = iavec3(lerp(uvt[0].xyz(), uvt[1].xyz(), t.x), lerp(uvt[2].xyz(), uvt[3].xyz(), t.y));
-	if(p[0].x > p[0].y) std::swap(p[0].x, p[0].y);
-	if(p[1].x > p[1].y) std::swap(p[1].x, p[1].y);
-	if(p[2].x > p[2].y) std::swap(p[2].x, p[2].y);
-	//cout << "B: \n"; print(p);
-	return map(p);
-}
-
-// returns lerp target between 0 and 1 for near and far lerps
-vec2 trace(const mat4& uvt, float e){
-	vec2 t = vec2(0.0f, 1.0f);
-	for(int i = 1; i < 60; i++){
-		float th = icenter(t);
-		vec2 t0 = vec2(t.x, th);
-		vec2 d = trace(uvt, t0);
+ival* trace(const Frustum& f, ival t, float e){
+	for(int i = 0; i < 60; i++){
+		ival2 ts = split(t);
+		ival d = trace(f, ts.x);
 		//cout << "F(B): "; print(d);
-		if(icontains(d, 0.0f)){
-			t.y = th;
-			if(t.y - t.x < e)
-				return t;
+		if(d.contains(0.0f)){
+			t = ts.x;
+			if(t.width() < e)
+				return new ival(t);
 			continue;
 		}
-		t0 = vec2(th, t.y);
-		d = trace(uvt, t0);
+		d = trace(f, ts.y);
 		//cout << "F(B): "; print(d);
-		if(icontains(d, 0.0f)){
-			t.x = th;
-			if(t.y - t.x  < e)
-				return t;
+		if(d.contains(0.0f)){
+			t = ts.y;
+			if(t.width()  < e)
+				return new ival(t);
 			continue;
 		}
-		return vec2(10.0f, 10.0f);
+		return nullptr;
 	}
-	return vec2(10.0f, 10.0f);
+	return nullptr;
 }
 
-void split(std::vector<glm::mat3>& s, const glm::mat3& m){
-	//cout << "Split called!\n";
-	float xmin = m[0].x;
-	float xmax = m[0].y;
-	float ymin = m[1].x;
-	float ymax = m[1].y;
-	float cx = 0.5f*(xmin+xmax);
-	float cy = 0.5f*(ymin+ymax);
-	s.push_back(iavec3({xmin, cx}, {ymin, cy}, m[2].xy()));
-	s.push_back(iavec3({cx, xmax}, {ymin, cy}, m[2].xy()));
-	s.push_back(iavec3({xmin, cx}, {cy, ymax}, m[2].xy()));
-	s.push_back(iavec3({cx, xmax}, {cy, ymax}, m[2].xy()));
+void split(std::vector<ival3>& s, const ival3& uvt){
+	ival2 u = split(uvt.x);
+	ival2 v = split(uvt.y);
+	s.push_back(ival3(u.x, v.x, uvt.z));
+	s.push_back(ival3(u.x, v.y, uvt.z));
+	s.push_back(ival3(u.y, v.x, uvt.z));
+	s.push_back(ival3(u.y, v.y, uvt.z));
+}
+
+struct SubArgs{
+	ival3 uvt;
+	float e;
+	int depth;
+	SubArgs(const ival3& a, float b, int c)
+		: uvt(a), e(b), depth(c){};
+};
+
+// dont use odd thread count
+void getStartingUVs(unsigned threads, std::vector<glm::vec4>& uvs){
+	unsigned divx = 0;
+	unsigned divy = 0;
+	unsigned p = 1;
+	while(p < threads){
+		if(divy < divx){
+			divy++;
+			p = p << 1;
+		}
+		else {
+			divx++;
+			p = p << 1;
+		}
+	}
+	unsigned xres = 1 << divx;
+	unsigned yres = 1 << divy;
+	const float dx = 2.0f / xres;
+	const float dy = 2.0f / yres;
+	cout << xres << " " << yres << " : " << dx << " " << dy << endl;
+	for(unsigned i = 0; i < p; i++){
+		unsigned r = yres*i / p;
+		unsigned c = i % xres;
+		cout << c << " " << r << endl;
+		float xmin = -1.0f + c * dx;
+		float xmax = -1.0f + dx + c * dx;
+		float ymin = -1.0f + r * dy;
+		float ymax = -1.0f + dy + r * dy;
+		uvs.push_back({xmin, xmax, ymin, ymax});
+	}
 }
 
 void subdivide(const Camera& cam, ZPyramid& pyr, int i, float e){
-	vec4 uv((i & 1) ? vec2( 0.0f, 1.0f) : vec2(-1.0f, 0.0f),
+	ival2 uv((i & 1) ? vec2( 0.0f, 1.0f) : vec2(-1.0f, 0.0f),
 			(i & 2) ? vec2(-1.0f, 0.0f) : vec2( 0.0f, 1.0f));
-	//cout << "UV: "; print(uv);
 	int depth = 1;
 	const int max_depth = 4;//pyr.getMaxDepth();
-	vector<mat3> stack;
+	vector<SubArgs> stack;
 	stack.push_back(iavec3(uv.xy(), uv.zw(), {cam.getNear(), pyr(depth, {0.0f, 0.0f})} ));
 	while(depth <= max_depth && !stack.empty()){
 		//cout << "DEPTH : " << depth << endl;
@@ -139,6 +131,10 @@ int main(int argc, char* argv[]){
 		cout << argv[0] << " <screen width> <screen height>" << endl;
 		return 1;
 	}
+	
+	std::vector<vec4> a;
+	getStartingUVs(32, a);
+
 	const ivec2 WH = ivec2(atoi(argv[1]), atoi(argv[2]));
 	const vec2 dwh = vec2(2.0f / WH.x, 2.0f / WH.y);
     const vec2 ddx = vec2(dwh.x, 0.0f);
@@ -175,7 +171,7 @@ int main(int argc, char* argv[]){
 		const vec3 ro = camera.getEye();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
 			light_pos = ro;
-		
+			
 		/*
 		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
 		for(int k = 0; k < WH.x*WH.y; k++){
@@ -188,7 +184,7 @@ int main(int argc, char* argv[]){
 			pyramid(pf, xy) = t;
 		}
 		*/
-		
+
 		#pragma omp parallel for num_threads(4) schedule(static, 1)
 		for(int k = 0; k < 4; k++){
 			subdivide(camera, pyramid, k, 0.1f);

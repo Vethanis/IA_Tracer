@@ -56,30 +56,15 @@ public:
 	inline float getFov()const{return m_fov;}
 	inline void setEye(const glm::vec3& eye){m_eye = eye;}
 	// returns world ray from canonical screen coords
-	inline glm::vec3 getRay(const glm::vec2& uv)const{
-		glm::vec4 temp(uv, 0.0f, 1.0f);
+	inline glm::vec3 getRay(float x, float y)const{
+		glm::vec4 temp(x, y, 0.0f, 1.0f);
 		temp = IVP * temp;
 		temp = temp / temp.w;
 		return glm::normalize(glm::vec3(temp) - m_eye);
 	}
 	// returns world coords, x and y are in canonical screen space, z is linear
-	inline glm::vec3 getPoint(const glm::vec2& uv, float z)const{
-		return m_eye + getRay(uv)*z;
-	}
-	// input: mat3 of vec2s minmax pairs: 0:U 1:V 2:T
-	// output: mat4 of vec3s: 0:bln, 1:blf, 2:trn, 3:trf
-	inline glm::mat4 getPoints(const glm::mat3& in)const{
-		//printf("getPoints input\n"); print(in);
-		glm::vec3 bln = getPoint({in[0].x, in[1].x}, in[2].x);
-		glm::vec3 blf = getPoint({in[0].x, in[1].x}, in[2].y);
-		glm::vec3 trn = getPoint({in[0].y, in[1].y}, in[2].x);
-		glm::vec3 trf = getPoint({in[0].y, in[1].y}, in[2].y);
-		//printf("bln: "); print(bln);
-		//printf("blf: "); print(blf);
-		//printf("trn: "); print(trn);
-		//printf("trf: "); print(trf);
-		return glm::mat4(glm::vec4(bln, 1.0f), glm::vec4(blf, 1.0f),
-						 glm::vec4(trn, 1.0f), glm::vec4(trf, 1.0f));
+	inline glm::vec3 getPoint(float x, float y, float z)const{
+		return m_eye + getRay(x, y)*z;
 	}
 	inline void move(const glm::vec3& v){
 		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
