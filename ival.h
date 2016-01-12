@@ -3,6 +3,8 @@
 
 #include "glm/glm.hpp"
 #include <algorithm>
+#include <vector>
+#include "stdio.h"
 
 struct ival{
 	float l, h;
@@ -298,6 +300,39 @@ inline ival2 split(ival a){
 	r.y.l = r.x.h; 
 	r.y.h = a.h;
 	return r;
+}
+
+inline void split(const ival2& a, ival2* ary){
+	ival2 u = split(a.x);
+	ival2 v = split(a.y);
+	ary[0] = ival2(u.x, v.x);
+	ary[1] = ival2(u.x, v.y);
+	ary[2] = ival2(u.y, v.x);
+	ary[3] = ival2(u.y, v.y);
+}
+
+inline void split(const ival3& a, ival3* ary){
+	ival2 u = split(a.x);
+	ival2 v = split(a.y);
+	ival2 t = split(a.z);
+	ary[0] = ival3(u.x, v.x, t.x);
+	ary[1] = ival3(u.x, v.x, t.y);
+	ary[2] = ival3(u.x, v.y, t.x);
+	ary[3] = ival3(u.x, v.y, t.y);
+	ary[4] = ival3(u.y, v.x, t.x);
+	ary[5] = ival3(u.y, v.x, t.y);
+	ary[6] = ival3(u.y, v.y, t.x);
+	ary[7] = ival3(u.y, v.y, t.y);
+}
+
+inline void print(ival a){
+	printf("[%.3f, %.3f]\n", a.l, a.h);
+}
+inline void print(const ival2& a){
+	printf("([%.3f, %.3f], [%.3f, %.3f])\n", a.x.l, a.x.h, a.y.l, a.y.h); 
+}
+inline void print(const ival3& a){
+	printf("([%.3f, %.3f], [%.3f, %.3f], [%.3f, %.3f])\n", a.x.l, a.x.h, a.y.l, a.y.h, a.z.l, a.z.h); 
 }
 
 #endif

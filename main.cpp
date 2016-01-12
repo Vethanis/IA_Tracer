@@ -10,6 +10,7 @@
 #include "glm/gtx/compatibility.hpp"
 #include "glmprint.h"
 #include "frustum.h"
+#include <string>
 #include "omp.h"
 
 using namespace std;
@@ -17,47 +18,6 @@ using namespace glm;
 
 #define NEAR 0.1f
 #define FAR 20.0f
-
-inline ival map(const ival3& p){
-	return isphere4(p, {0.0f, 0.0f, 0.0f}, 1.0f);
-}
-
-inline ival trace(const Frustum& f, ival t){
-	return map(f.getInterval(t));
-}
-
-ival* trace(const Frustum& f, ival t, float e){
-	for(int i = 0; i < 60; i++){
-		ival2 ts = split(t);
-		ival d = trace(f, ts.x);
-		//cout << "F(B): "; print(d);
-		if(d.contains(0.0f)){
-			t = ts.x;
-			if(t.width() < e)
-				return new ival(t);
-			continue;
-		}
-		d = trace(f, ts.y);
-		//cout << "F(B): "; print(d);
-		if(d.contains(0.0f)){
-			t = ts.y;
-			if(t.width()  < e)
-				return new ival(t);
-			continue;
-		}
-		return nullptr;
-	}
-	return nullptr;
-}
-
-void split(std::vector<ival3>& s, const ival3& uvt){
-	ival2 u = split(uvt.x);
-	ival2 v = split(uvt.y);
-	s.push_back(ival3(u.x, v.x, uvt.z));
-	s.push_back(ival3(u.x, v.y, uvt.z));
-	s.push_back(ival3(u.y, v.x, uvt.z));
-	s.push_back(ival3(u.y, v.y, uvt.z));
-}
 
 struct SubArgs{
 	ival3 uvt;
@@ -67,57 +27,70 @@ struct SubArgs{
 		: uvt(a), e(b), depth(c){};
 };
 
-// dont use odd thread count
-void getStartingUVs(unsigned threads, std::vector<glm::vec4>& uvs){
-	unsigned divx = 0;
-	unsigned divy = 0;
-	unsigned p = 1;
-	while(p < threads){
-		if(divy < divx){
-			divy++;
-			p = p << 1;
-		}
-		else {
-			divx++;
-			p = p << 1;
-		}
-	}
-	unsigned xres = 1 << divx;
-	unsigned yres = 1 << divy;
-	const float dx = 2.0f / xres;
-	const float dy = 2.0f / yres;
-	cout << xres << " " << yres << " : " << dx << " " << dy << endl;
-	for(unsigned i = 0; i < p; i++){
-		unsigned r = yres*i / p;
-		unsigned c = i % xres;
-		cout << c << " " << r << endl;
-		float xmin = -1.0f + c * dx;
-		float xmax = -1.0f + dx + c * dx;
-		float ymin = -1.0f + r * dy;
-		float ymax = -1.0f + dy + r * dy;
-		uvs.push_back({xmin, xmax, ymin, ymax});
-	}
+inline ival map(const ival3& p){
+	return isphere(p, {0.0f, 0.0f, 0.0f}, 1.0f);
 }
 
-void subdivide(const Camera& cam, ZPyramid& pyr, int i, float e){
-	ival2 uv((i & 1) ? vec2( 0.0f, 1.0f) : vec2(-1.0f, 0.0f),
-			(i & 2) ? vec2(-1.0f, 0.0f) : vec2( 0.0f, 1.0f));
-	int depth = 1;
-	const int max_depth = 4;//pyr.getMaxDepth();
+// returns ival in [0, 1] range for z
+ival* trace(const Camera& c, const SubArgs& args){
+	ival t = args.uvt.z;
+	ival d = map(getInterval(c, args.uvt, t));
+	cout << "F(B): "; print(d);
+	if(!d.contains(0.0f)) return nullptr;
+	for(int i = 1; i < 60; i++){
+		ival2 ts = split(t);
+		d = map(getInterval(c, args.uvt, t));
+		cout << "F(B): "; print(d);
+		if(d.contains(0.0f)){
+			t = ts.x;
+			if(t.width() < args.e)
+				return new ival(t);
+			continue;
+		}
+		d = map(getInterval(c, args.uvt, t));
+		cout << "F(B): "; print(d);
+		if(d.contains(0.0f)){
+			t = ts.y;
+			if(t.width() < args.e)
+				return new ival(t);
+			continue;
+		}
+		return nullptr;
+	}
+	return nullptr;
+}
+
+void split(std::vector<SubArgs>& s, const SubArgs& args){
+	ival2 u = split(args.uvt.x);
+	ival2 v = split(args.uvt.y);
+	s.push_back({ival3(u.x, v.x, args.uvt.z), args.e*0.5f, args.depth+1});
+	s.push_back({ival3(u.x, v.y, args.uvt.z), args.e*0.5f, args.depth+1});
+	s.push_back({ival3(u.y, v.x, args.uvt.z), args.e*0.5f, args.depth+1});
+	s.push_back({ival3(u.y, v.y, args.uvt.z), args.e*0.5f, args.depth+1});
+}
+
+void subdivide(unsigned p, const Camera& cam, ZPyramid& pyr, const ival2& uv, float e){
+	int depth = pyr.getDepthFromP(p);
+	cout << "Starting Depth: " << depth << endl;
+	const int max_depth = pyr.getMaxDepth();
+	cout << "Max Depth: " << max_depth << endl;
 	vector<SubArgs> stack;
-	stack.push_back(iavec3(uv.xy(), uv.zw(), {cam.getNear(), pyr(depth, {0.0f, 0.0f})} ));
-	while(depth <= max_depth && !stack.empty()){
-		//cout << "DEPTH : " << depth << endl;
-		mat3 uvt = stack.back();
+	stack.push_back({{uv.x, uv.y, {0.0f, 1.0f}}, e, depth});
+	while(!stack.empty()){
+		SubArgs args = stack.back();
 		stack.pop_back();
-		//cout << "UVT: \n"; print(uvt);
-		uvt[2] = vec3(trace(cam.getPoints(uvt), e) * (cam.getFar() - cam.getNear()), 0.0f);
-		if(uvt[2].y < pyr(depth, icenter(uvt[0].xy(), uvt[1].xy())) ){
-			pyr.paint(depth, uvt);
-			e = e * 0.5f;
-			depth++;
-			if(depth <= max_depth)
-				split(stack, uvt);
+		cout << "Depth: " << args.depth << endl;
+		cout << "B0: "; print(args.uvt);
+		ival *t = trace(cam, args);
+		if(t){
+			if(t->h < pyr(args.depth, args.uvt.x.center(), args.uvt.y.center())){
+				args.uvt.z = *t;
+				cout << "B1: "; print(args.uvt);
+				pyr.paint(args.depth, args.uvt);
+				if(args.depth <= max_depth)
+					split(stack, args);
+			}
+			delete t;
 		}
 	}
 }
@@ -128,38 +101,41 @@ inline float distSquared(const glm::vec3& a, const glm::vec3& b){
 
 int main(int argc, char* argv[]){
 	if(argc < 3){
-		cout << argv[0] << " <screen width> <screen height>" << endl;
+		cout << argv[0] << " <screen width> <screen height> <num_threads>" << endl;
 		return 1;
 	}
+	const int WIDTH = atoi(argv[1]);
+	const int HEIGHT = atoi(argv[2]);
+	const unsigned threads = stoul(argv[3]);
 	
-	std::vector<vec4> a;
-	getStartingUVs(32, a);
+	std::vector<ival2> uvs;
+	getStartingUVs(threads, uvs);
+	for(const auto& a : uvs)
+		print(a);
 
-	const ivec2 WH = ivec2(atoi(argv[1]), atoi(argv[2]));
-	const vec2 dwh = vec2(2.0f / WH.x, 2.0f / WH.y);
-    const vec2 ddx = vec2(dwh.x, 0.0f);
-    const vec2 ddy = vec2(0.0f, dwh.y);
-	Window window(WH.x, WH.y, 3, 3, "IA Beam Casting");
+	const float dx = 2.0f / WIDTH;
+	const float dy = 2.0f / HEIGHT;
+	Window window(WIDTH, HEIGHT, 3, 3, "IA Beam Casting");
 	Input input(window.getWindow());
 	GLProgram prog("shader.vert", "shader.frag");
 	prog.bind();
-	GLScreen screen(WH.x, WH.y);
-	ZPyramid pyramid(WH.x, WH.y);
-	pyramid.clear(FAR);
+	GLScreen screen(WIDTH, HEIGHT);
+	ZPyramid pyramid(WIDTH, HEIGHT);
 	const int pf = pyramid.getMaxDepth();
 	
 	Camera camera;
 	camera.setEye({0.0f, 0.0f, 3.0f});
-	camera.resize(WH.x, WH.y);
+	camera.resize(WIDTH, HEIGHT);
 	camera.update();
     
-	vec3 ambient(0.001f, 0.0005f, 0.0005f);
+	vec3 ambient(0.1f, 0.05f, 0.05f);
     vec3 light_pos(2.f, 2.f, 2.f);
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
-	//subdivide(camera, pyramid, 0, 1.0f);
-	//return 0;
+	
+	subdivide(threads, camera, pyramid, uvs[0], 0.1f);
+	return 0;
 	
 	input.poll();
     unsigned i = 0;
@@ -171,35 +147,23 @@ int main(int argc, char* argv[]){
 		const vec3 ro = camera.getEye();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
 			light_pos = ro;
-			
-		/*
-		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
-		for(int k = 0; k < WH.x*WH.y; k++){
-			const int c = k % WH.x;
-			const int r = k / WH.x;
-			const vec2 xy = vec2(c*dwh.x-1.0f, r*dwh.y-1.0f);
-			vec3 rd = camera.getRay(xy);
-			float t = trace(ro, rd, 0.001f);
-			if(t == -1.0f) continue;
-			pyramid(pf, xy) = t;
-		}
-		*/
 
-		#pragma omp parallel for num_threads(4) schedule(static, 1)
-		for(int k = 0; k < 4; k++){
-			subdivide(camera, pyramid, k, 0.1f);
+		#pragma omp parallel for num_threads(threads) schedule(static, 1)
+		for(unsigned k = 0; k < threads; k++){
+			subdivide(threads, camera, pyramid, uvs[k], 0.1f);
 		}
 		
-		#pragma omp parallel for num_threads(8) schedule(dynamic, 12)
-		for(int k = 0; k < WH.x*WH.y; k++){
-			const int c = clamp(k % WH.x, 1, WH.x-2);
-			const int r = clamp(k / WH.x, 1, WH.y-2);
-			const vec2 xy = vec2(c*dwh.x-1.0f, r*dwh.y-1.0f);
-			const float z = pyramid(pf, xy);
+		#pragma omp parallel for num_threads(threads) schedule(dynamic, 12)
+		for(int k = 0; k < WIDTH*HEIGHT; k++){
+			const int c = clamp(k % WIDTH, 1, WIDTH-2);
+			const int r = clamp(k / HEIGHT, 1, HEIGHT-2);
+			const float x = c*dx - 1.0f;
+			const float y = r*dy - 1.0f;
+			const float z = pyramid(pf, x, y);
 			if(z == FAR) continue;
-			vec3 pos = camera.getPoint(xy, z);
-			vec3 xv = camera.getPoint(xy+ddx, pyramid(pf, xy+ddx)) - pos;
-			vec3 yv = camera.getPoint(xy+ddy, pyramid(pf, xy+ddy)) - pos;
+			vec3 pos = camera.getPoint(x, y, z);
+			vec3 xv = camera.getPoint(x+dx, y, pyramid(pf, x+dx, y)) - pos;
+			vec3 yv = camera.getPoint(x, y+dy, pyramid(pf, x, y+dy)) - pos;
 			vec3 N = normalize(cross(xv, yv));
 			vec3 L = normalize(light_pos - pos);
 			vec3 H = normalize(L + normalize(ro - pos));
@@ -214,7 +178,7 @@ int main(int argc, char* argv[]){
         glfwSwapBuffers(window.getWindow());    	
         glClear(GL_COLOR_BUFFER_BIT);
     	screen.clear();
-    	pyramid.clear(FAR);
+    	pyramid.clear(1.0f);
     	
         i++;
         if(i >= 60){

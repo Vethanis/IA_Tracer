@@ -4,36 +4,59 @@
 #include "glm/glm.hpp"
 #include "camera.h"
 #include "ival.h"
+#include <vector>
 
-struct Frustum{
-	// bln, blf, tln, tlf, brn, brf, trn, trf
-	glm::vec3 data[8];
-	float near, far;
-	// uvt is xy range in [-1, 1], z in positive [near, far] clipping plane range
-	Frustum(const Camera& c, const ival3& uvt){
-		data[0] = c.getPoint(uvt.x.l, uvt.y.l, uvt.z.l);
-		data[1] = c.getPoint(uvt.x.l, uvt.y.l, uvt.z.h);
-		data[2] = c.getPoint(uvt.x.l, uvt.y.h, uvt.z.l);
-		data[3] = c.getPoint(uvt.x.l, uvt.y.h, uvt.z.h);
-		data[4] = c.getPoint(uvt.x.h, uvt.y.l, uvt.z.l);
-		data[5] = c.getPoint(uvt.x.h, uvt.y.l, uvt.z.h);
-		data[6] = c.getPoint(uvt.x.h, uvt.y.h, uvt.z.l);
-		data[7] = c.getPoint(uvt.x.h, uvt.y.h, uvt.z.h);
-		near = c.getNear(); far = c.getNear();
+// uvt is in ndc
+inline ival3 getInterval(const Camera& c, const ival3& uvt){
+	ival3 i(c.getPoint(uvt.x.l, uvt.y.l, uvt.z.l), c.getPoint(uvt.x.l, uvt.y.l, uvt.z.h));
+	i = opUnion(i, c.getPoint(uvt.x.l, uvt.y.h, uvt.z.l));
+	i = opUnion(i, c.getPoint(uvt.x.l, uvt.y.h, uvt.z.h));
+	i = opUnion(i, c.getPoint(uvt.x.h, uvt.y.l, uvt.z.l));
+	i = opUnion(i, c.getPoint(uvt.x.h, uvt.y.l, uvt.z.h));
+	i = opUnion(i, c.getPoint(uvt.x.h, uvt.y.h, uvt.z.l));
+	i = opUnion(i, c.getPoint(uvt.x.h, uvt.y.h, uvt.z.h));
+	return i;
+}
+
+// for bisection without mutating input uvt
+inline ival3 getInterval(const Camera& c, const ival3& uvt, ival t){
+	ival3 i(c.getPoint(uvt.x.l, uvt.y.l, t.l), c.getPoint(uvt.x.l, uvt.y.l, t.h));
+	i = opUnion(i, c.getPoint(uvt.x.l, uvt.y.h, t.l));
+	i = opUnion(i, c.getPoint(uvt.x.l, uvt.y.h, t.h));
+	i = opUnion(i, c.getPoint(uvt.x.h, uvt.y.l, t.l));
+	i = opUnion(i, c.getPoint(uvt.x.h, uvt.y.l, t.h));
+	i = opUnion(i, c.getPoint(uvt.x.h, uvt.y.h, t.l));
+	i = opUnion(i, c.getPoint(uvt.x.h, uvt.y.h, t.h));
+	return i;
+}
+
+// dont use odd thread count
+void getStartingUVs(unsigned threads, std::vector<ival2>& uvs){
+	unsigned divx = 0;
+	unsigned divy = 0;
+	unsigned p = 1;
+	while(p < threads){
+		if(divy < divx){
+			divy++;
+			p = p << 1;
+		}
+		else {
+			divx++;
+			p = p << 1;
+		}
 	}
-	// returns min(xyz) and max(xyz) at a given depth t:[near, far]
-	// should be 35 flops, 18 conditional moves
-	inline ival3 getInterval(float t)const{
-		t = (t - near) / (far - near); // map to [0, 1] for lerp
-		ival3 i(glm::lerp(data[0], data[1], t), glm::lerp(data[2], data[3], t));
-		i = opUnion(i, glm::lerp(data[4], data[5], t));
-		i = opUnion(i, glm::lerp(data[6], data[7], t));
-		return i;
+	unsigned xres = 1 << divx;
+	unsigned yres = 1 << divy;
+	const float dx = 2.0f / xres;
+	const float dy = 2.0f / yres;
+	printf("xres: %u, yres: %u, dx: %.3f, dy: %.3f\n", xres, yres, dx, dy);
+	for(unsigned i = 0; i < p; i++){
+		unsigned r = yres*i / p;
+		unsigned c = i % xres;
+		float xmin = -1.0f + c * dx;
+		float ymin = -1.0f + r * dy;
+		uvs.push_back({xmin, xmin+dx, ymin, ymin+dy});
 	}
-	// should be 70 flops, 42 conditional moves
-	inline ival3 getInterval(ival t)const{
-		return opUnion(getInterval(t.l), getInterval(t.h));
-	}
-};
+}
 
 #endif

@@ -62,9 +62,12 @@ public:
 		temp = temp / temp.w;
 		return glm::normalize(glm::vec3(temp) - m_eye);
 	}
-	// returns world coords, x and y are in canonical screen space, z is linear
+	// returns world coords, xyz in [-1, 1]
+	// 32 flops
 	inline glm::vec3 getPoint(float x, float y, float z)const{
-		return m_eye + getRay(x, y)*z;
+		glm::vec4 ndc(x, y, z, 1.0f);
+		ndc = IVP * ndc;
+		return glm::vec3(ndc / ndc.w);
 	}
 	inline void move(const glm::vec3& v){
 		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
