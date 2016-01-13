@@ -65,7 +65,7 @@ vec2 isphere(in vec2 x, in vec2 y, in vec2 z, float r){
 	return ipow2(x) + ipow2(y), + ipow2(z) - r*r;
 }
 bool contains(vec2 a, float s){
-	return a.x < s && a.y > s;
+	return a.x <= s && a.y > s;
 }
 float width(vec2 a){
 	return a.y - a.x;
@@ -89,9 +89,7 @@ vec2 trace(in vec3 dir, in vec2 z, in float e){
 	vec2 t = z;
 	for(int i = 0; i < 60; i++){
 		vec2 t0 = vec2(t.x, center(t));
-		vec3 start = eye + dir*t0.x;
-		vec3 end = eye + dir*t0.y;
-		vec2 F = map(start, end);
+		vec2 F = map(eye + dir*t0.x, eye + dir*t0.y);
 		if(contains(F, 0.0f)){
 			t = t0;
 			if(width(t) < e)
@@ -99,9 +97,7 @@ vec2 trace(in vec3 dir, in vec2 z, in float e){
 			continue;
 		}
 		t0 = vec2(t0.y, t.y);
-		start = eye + dir*t0.x;
-		end = eye + dir*t0.y;
-		F = map(start, end);
+		F = map(eye + dir*t0.x, eye + dir*t0.y);
 		if(contains(F, 0.0f)){
 			t = t0;
 			if(width(t) < e)
@@ -112,7 +108,7 @@ vec2 trace(in vec3 dir, in vec2 z, in float e){
 		t.y += e;
 		if(invalid(t)) break;
 	}
-	return vec2(0.0f, 10.0f);
+	return vec2(0.0f, 100000.0f);
 }
 
 void main(){
@@ -124,6 +120,5 @@ void main(){
 	vec2 t = vec2(near, far);
 	vec3 dir = normalize(mix(mix(tl, tr, uv.x), mix(bl, br, uv.x), uv.y));
 	float depth = center(trace(dir, t, 0.01f));
-	depth = 5.0f;
 	imageStore(dbuf, pix, vec4(depth));
 }

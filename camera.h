@@ -71,7 +71,7 @@ public:
 		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
 	}
 	void pitch(float amt){
-		m_pitch += amt;
+		m_pitch -= amt;
 		m_pitch = std::max(std::min(89.0f, m_pitch), -89.0f);
 	}
 	void yaw(float amt){

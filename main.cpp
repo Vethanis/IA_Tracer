@@ -42,8 +42,8 @@ int main(int argc, char* argv[]){
 	Window window(WIDTH, HEIGHT, 4, 3, "IA Ray Casting");
 	Input input(window.getWindow());
 	ComputeShader depthProg("depth.glsl");
-	unsigned callsizeX = WIDTH / 8 + (WIDTH % 8) ? 1 : 0;
-	unsigned callsizeY = HEIGHT / 8 + (HEIGHT % 8) ? 1 : 0;
+	unsigned callsizeX = WIDTH / 8 + ((WIDTH % 8) ? 1 : 0);
+	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
 	GLProgram colorProg("fullscreen.glsl", "color.glsl");
 	GLScreen screen(WIDTH, HEIGHT);
 	Texture dbuf(WIDTH, HEIGHT, DEPTH);
@@ -58,14 +58,14 @@ int main(int argc, char* argv[]){
 	colorProg.setUniform("ddy", ddy);
 	colorProg.setUniformFloat("near", camera.getNear());
 	colorProg.setUniformFloat("far", camera.getFar());
-	colorProg.setUniformInt("dbuf", 0);
 	
 	depthProg.bind();
 	depthProg.setUniformFloat("near", camera.getNear());
 	depthProg.setUniformFloat("far", camera.getFar());
-	depthProg.setUniformInt("dbuf", 0);
 	
-	dbuf.bind(0);
+	cout << callsizeX << endl;
+	cout << callsizeY << endl;
+
 	
 	input.poll();
     unsigned i = 0;
@@ -84,7 +84,11 @@ int main(int argc, char* argv[]){
 		depthProg.setUniform("tr", tr);
 		depthProg.setUniform("bl", bl);
 		depthProg.setUniform("br", br);
+		glBindImageTexture(0, dbuf.getID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
 		depthProg.call(callsizeX, callsizeY, 1);
+		
+		
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		
 		colorProg.bind();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
@@ -94,6 +98,8 @@ int main(int argc, char* argv[]){
 		colorProg.setUniform("tr", tr);
 		colorProg.setUniform("bl", bl);
 		colorProg.setUniform("br", br);
+		dbuf.bind(0);
+		colorProg.setUniformInt("dbuf", 0);
 		screen.draw();
 		
         window.swap();
