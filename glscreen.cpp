@@ -2,14 +2,12 @@
 #include "myglheaders.h"
 #include "debugmacro.h"
 
-#include "camera.h"
-
-#define FRAME_BYTES sizeof(float) * width * height * 3
+#define FRAME_BYTES sizeof(float) * width * height
 
 GLScreen::GLScreen(unsigned w, unsigned h) : width(w), height(h){
 	cx = width * 0.5f;
 	cy = height * 0.5f;
-    h_frame = (glm::vec3*)malloc(FRAME_BYTES);
+    h_frame = (float*)malloc(FRAME_BYTES);
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
     glBindVertexArray(vao);
@@ -45,18 +43,11 @@ GLScreen::~GLScreen(){
 	MYGLERRORMACRO
 }
 
-void GLScreen::clear(){
-	glm::vec3 clearColor(0.0f);
-	for(unsigned i = 0; i < width * height; i++){
-		*(h_frame + i) = clearColor;
-	}
-}
-
 void GLScreen::draw(){
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, h_frame);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_R, GL_FLOAT, h_frame);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     MYGLERRORMACRO
 }

@@ -14,29 +14,35 @@ struct ival{
 	inline ival& operator=(ival other){
 		l = other.l; h = other.h; return *this;
 	}
-	inline ival& operator+(ival other){
-		l = l + other.l; h = h + other.h; return *this;
-	}
-	inline ival& operator-(ival other){
-		l = l - other.h; h = h - other.l; return *this;
-	}
-	inline ival& operator*(ival other){
-		float t[4] = {l*other.l, l*other.h, h*other.l, h*other.h};
-		l = std::min(std::min(std::min(t[0], t[1]), t[2]), t[3]);
-		h = std::max(std::max(std::max(t[0], t[1]), t[2]), t[3]);
-		return *this;
-	}
-	inline ival& operator/(ival other){
-		float t[4] = {l/other.l, l/other.h, h/other.l, h/other.h};
-		l = std::min(std::min(std::min(t[0], t[1]), t[2]), t[3]);
-		h = std::max(std::max(std::max(t[0], t[1]), t[2]), t[3]);
-		return *this;
-	}
-	inline float width()const{ return h - l; }
-	inline float center()const{ return 0.5f*(l+h); }
-	inline bool contains(float s){ return l <= s && h > s; }
-	inline void widen(float s){ l -= s; h += s; }
 };
+inline ival operator+(ival a, ival b){
+	return ival(a.l+b.l, a.h+b.h);
+}
+inline ival operator-(ival a, ival b){
+	return ival(a.l-b.h, a.h-b.l);
+}
+inline ival operator*(ival a, ival b){
+	float t[4] = {a.l*b.l, a.l*b.h, a.h*b.l, a.h*b.h};
+	return ival(std::min(std::min(std::min(t[0], t[1]), t[2]), t[3]),
+				std::max(std::max(std::max(t[3], t[2]), t[1]), t[0]));
+}
+inline ival operator/(ival a, ival b){
+	float t[4] = {a.l/b.h, a.l/b.l, a.h/b.h, a.h/b.l};
+	return ival(std::min(std::min(std::min(t[0], t[1]), t[2]), t[3]),
+				std::max(std::max(std::max(t[3], t[2]), t[1]), t[0]));
+}
+inline float width(ival a){
+	return a.h - a.l;
+}
+inline float center(ival a){
+	return 0.5f*(a.l + a.h);
+}
+inline bool contains(ival a, float s){
+	return a.l <= s && a.h > s;
+}
+inline ival widen(ival a, float s){
+	return ival(a.l - s, a.h + s);
+}
 
 inline ival opUnion(ival a, ival b){
 	a.l = std::min(a.l, b.l);
@@ -93,7 +99,16 @@ inline ival operator/(float s, ival a){
 	return ival(s/a.l, s/a.h);
 }
 inline ival pow2(ival a){
-	return ival(a*a);
+	return a*a;
+}
+inline ival pow4(ival a){
+	return pow2(pow2(a));
+}
+inline ival pow8(ival a){
+	return pow2(pow2(pow2(a)));
+}
+inline ival sqrt(ival a){
+	return ival(sqrt(a.l), sqrt(a.h));
 }
 
 struct ival2{
@@ -106,23 +121,29 @@ struct ival2{
 	inline ival2& operator=(const ival2& other){
 		x = other.x; y = other.y; return *this;
 	}
-	inline ival2& operator+(const ival2& other){
-		x = x + other.x; y = y + other.y; return *this;
-	}
-	inline ival2& operator-(const ival2& other){
-		x = x - other.x; y = y - other.y; return *this;
-	}
-	inline ival2& operator*(const ival2& other){
-		x = x * other.x; y = y * other.y; return *this;
-	}
-	inline ival2& operator/(const ival2& other){
-		x = x / other.x; y = y / other.y; return *this;
-	}
-	inline glm::vec2 widths()const{ return glm::vec2(x.width(), y.width());}
-	inline float area()const{ return x.width() * y.width(); }
-	inline glm::vec2 center()const{return glm::vec2(x.center(), y.center());}
 };
 
+inline ival2 operator+(const ival2& a, const ival2& b){
+	return ival2(a.x+b.x, a.y+b.y);
+}
+inline ival2 operator-(const ival2& a, const ival2& b){
+	return ival2(a.x-b.x, a.y-b.y);
+}
+inline ival2 operator*(const ival2& a, const ival2& b){
+	return ival2(a.x*b.x, a.y*b.y);
+}
+inline ival2 operator/(const ival2& a, const ival2& b){
+	return ival2(a.x/b.x, a.y/b.y);
+}
+inline glm::vec2 width(const ival2& a){
+	return glm::vec2(width(a.x), width(a.y));
+}
+inline float area(const ival2& a){
+	return width(a.x) * width(a.y);
+}
+inline glm::vec2 center(const ival2& a){
+	return glm::vec2(center(a.x), center(a.y));
+}
 inline ival2 operator+(const ival2& a, float s){
 	return ival2(a.x+s, a.y+s);
 }
@@ -183,11 +204,23 @@ inline ival2 opUnion(const ival2& a, const glm::vec2& b){
 inline ival2 opInter(const glm::vec2& a, const ival2& b){
 	return ival2(opInter(a.x, b.x), opInter(a.y, b.y));
 }
-inline ival2 pow2(ival2 a){
+inline ival2 pow2(const ival2& a){
 	return a*a;
 }
-inline ival reduce(ival2 a){
+inline ival2 pow4(const ival2& a){
+	return pow2(pow2(a));
+}
+inline ival2 pow8(const ival2& a){
+	return pow2(pow2(pow2(a)));
+}
+inline ival2 sqrt(const ival2& a){
+	return ival2(sqrt(a.x), sqrt(a.y));
+}
+inline ival reduce(const ival2& a){
 	return a.x + a.y;
+}
+inline ival2 widen(const ival2& a, float s){
+	return ival2(widen(a.x, s), widen(a.y, s));
 }
 
 struct ival3{
@@ -201,22 +234,29 @@ struct ival3{
 	inline ival3& operator=(const ival3& other){
 		x = other.x; y = other.y; z = other.z; return *this;
 	}
-	inline ival3& operator+(const ival3& other){
-		x = x + other.x; y = y + other.y; z = z + other.z; return *this;
-	}
-	inline ival3& operator-(const ival3& other){
-		x = x - other.x; y = y - other.y; z = z - other.z; return *this;
-	}
-	inline ival3& operator*(const ival3& other){
-		x = x * other.x; y = y * other.y; z = z * other.z; return *this;
-	}
-	inline ival3& operator/(const ival3& other){
-		x = x / other.x; y = y / other.y; z = z / other.z; return *this;
-	}
-	inline float volume()const{ return x.width() * y.width() * z.width(); }
-	inline glm::vec3 center()const{ return glm::vec3(x.center(), y.center(), z.center()); }
-	inline glm::vec3 widths()const{ return glm::vec3(x.width(), y.width(), z.width()); }
 };
+
+inline ival3 operator+(const ival3& a, const ival3& b){
+	return ival3(a.x+b.x, a.y+b.y, a.z+b.z);
+}
+inline ival3 operator-(const ival3& a, const ival3& b){
+	return ival3(a.x-b.x, a.y-b.y, a.z-b.z);
+}
+inline ival3 operator*(const ival3& a, const ival3& b){
+	return ival3(a.x*b.x, a.y*b.y, a.z*b.z);
+}
+inline ival3 operator/(const ival3& a, const ival3& b){
+	return ival3(a.x/b.x, a.y/b.y, a.z/b.z);
+}
+inline float volume(const ival3& a){
+	return width(a.x) * width(a.y) * width(a.z);
+}
+inline glm::vec3 center(const ival3& a){
+	return glm::vec3(center(a.x), center(a.y), center(a.z));
+}
+inline glm::vec3 widths(const ival3& a){
+	return glm::vec3(width(a.x), width(a.y), width(a.z));
+}
 
 inline ival3 operator+(const ival3& a, float s){
 	return ival3(a.x+s, a.y+s, a.z+s);
@@ -284,10 +324,16 @@ inline ival3 opInter(const ival3& a, const glm::vec3& b){
 inline ival3 opInter(const glm::vec3& a, const ival3& b){
 	return ival3(opInter(a.x, b.x), opInter(a.y, b.y), opInter(a.z, b.z));
 }
-inline ival3 pow2(ival3 a){
+inline ival3 pow2(const ival3& a){
 	return a*a;
 }
-inline ival reduce(ival3 a){
+inline ival3 pow4(const ival3& a){
+	return pow2(pow2(a));
+}
+inline ival3 pow8(const ival3& a){
+	return pow2(pow2(pow2(a)));
+}
+inline ival reduce(const ival3& a){
 	return a.x + a.y + a.z;
 }
 
@@ -313,7 +359,7 @@ inline ival isphere32(const ival3& p, const glm::vec3& c, float r){
 inline ival2 split(ival a){
 	ival2 r;
 	r.x.l = a.l; 
-	r.x.h = a.center();
+	r.x.h = center(a);
 	r.y.l = r.x.h; 
 	r.y.h = a.h;
 	return r;

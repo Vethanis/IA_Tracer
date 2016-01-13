@@ -32,9 +32,9 @@ Shader::~Shader(){
 void Shader::loadSourceFile(const char* src_path, std::string& src_on_stack){
     std::ifstream stream(src_path, std::ios::in);
     if(stream.is_open()){
-        std::string line = "";
+        std::string line;
         while(getline(stream, line))
-            src_on_stack += "\n" + line;
+            src_on_stack += line + "\n";//"\n" + line;
         stream.close();
     }
 }

@@ -25,13 +25,14 @@ public:
 	}
 	inline float& operator[](int i){return data[i];}
 	inline void paint(const ival3& uvt){
+		float z = center(uvt.z);
 		int c1 = (uvt.x.l+1.0f)*0.5f*(width-1);
 		int c2 = (uvt.x.h+1.0f)*0.5f*(width-1);
 		int r1 = (uvt.y.l+1.0f)*0.5f*(height-1);
 		int r2 = (uvt.y.h+1.0f)*0.5f*(height-1);
 		for(int r = r1; r < r2; r++){
 			for(int c = c1; c < c2; c++){
-				data[c*r] = std::min(data[c*r], uvt.z.h);
+				data[c*r] = std::min(data[c*r], z);
 			}
 		}
 	}

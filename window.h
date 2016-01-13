@@ -14,6 +14,8 @@ public:
     Window(int width, int height, int major_ver, int minor_ver, const std::string& title);
     ~Window();
     inline GLFWwindow* getWindow(){ return window; };
+    bool alive();
+    void swap();
 
 };
 #endif

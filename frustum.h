@@ -32,19 +32,17 @@ inline ival3 getInterval(const Camera& c, const ival3& uvt, ival t){
 }
 
 // dont use odd thread count
-void getStartingUVs(unsigned threads, std::vector<ival2>& uvs, int& depth_out){
+void getStartingUVs(float ratio, unsigned threads, std::vector<ival2>& uvs, int& depth_out){
 	unsigned divx = 0;
 	unsigned divy = 0;
 	unsigned p = 1;
 	while(p < threads){
-		if(divy < divx){
-			divy++;
-			p = p << 1;
-		}
-		else {
+		float c_ratio = (float)(1 << divx) / (float)(1 << divy);
+		if(c_ratio < ratio)
 			divx++;
-			p = p << 1;
-		}
+		else 
+			divy++;
+		p = p << 1;
 	}
 	unsigned xres = 1 << divx;
 	unsigned yres = 1 << divy;
