@@ -1,9 +1,7 @@
 
-#define GLM_FORCE_AVX
 #include "myglheaders.h"
+#include "camera.h"
 #include "debugmacro.h"
-#include "glm/gtx/simd_vec4.hpp"
-#include "glm/gtx/simd_mat4.hpp"
 #include "window.h"
 #include "input.h"
 #include "glprogram.h"

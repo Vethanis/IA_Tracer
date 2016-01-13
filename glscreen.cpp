@@ -25,18 +25,18 @@ GLScreen::GLScreen(unsigned w, unsigned h) : width(w), height(h){
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
+	//glGenTextures(1, &tex);
+	//glBindTexture(GL_TEXTURE_2D, tex);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //glBindTexture(GL_TEXTURE_2D, 0);
 	MYGLERRORMACRO
 }
 
 GLScreen::~GLScreen(){
-	glDeleteTextures(1, &tex);
+	//glDeleteTextures(1, &tex);
 	glDeleteBuffers(1, &vbo);
 	glDeleteVertexArrays(1, &vao);
 	free(h_frame);
@@ -46,8 +46,8 @@ GLScreen::~GLScreen(){
 void GLScreen::draw(){
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_R, GL_FLOAT, h_frame);
+    //glBindTexture(GL_TEXTURE_2D, tex);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_R, GL_FLOAT, h_frame);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     MYGLERRORMACRO
 }

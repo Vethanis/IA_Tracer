@@ -1,6 +1,9 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#define GLM_FORCE_AVX
+#include "glm/gtx/simd_vec4.hpp"
+#include "glm/gtx/simd_mat4.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include <algorithm>
