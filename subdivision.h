@@ -1,7 +1,6 @@
-#ifndef FRUSTUM_H
-#define FRUSTUM_H
+#ifndef SUBDIVISION_H
+#define SUBDIVISION_H
 
-#include "glm/glm.hpp"
 #include "camera.h"
 #include "ival.h"
 #include <vector>
@@ -58,6 +57,74 @@ void getStartingUVs(float ratio, unsigned threads, std::vector<ival2>& uvs, int&
 		//print(uvs.back());
 	}
 	depth_out = std::min(divx, divy);
+}
+
+struct SubArgs{
+	ival3 uvt;
+	float e;
+	int depth;
+	SubArgs(const ival3& a, float b, int c)
+		: uvt(a), e(b), depth(c){};
+};
+
+inline ival map(const ival3& p){
+	return isphere(p, {0.0f, 0.0f, 0.0f}, 1.0f);
+}
+
+// returns ival in [0, 1] range for z
+ival* trace(const Camera& c, const SubArgs& args){
+	ival t = args.uvt.z;
+	for(int i = 0; i < 32; i++){
+		ival2 ts = split(t);
+		ival d = map(getInterval(c, args.uvt, ts.x));
+		if(contains(d, 0.0f)){
+			t = ts.x;
+			if(width(t) < args.e)
+				return new ival(t);
+			continue;
+		}
+		d = map(getInterval(c, args.uvt, ts.y));
+		if(contains(d, 0.0f)){
+			t = ts.y;
+			if(width(t) < args.e)
+				return new ival(t);
+			continue;
+		}
+		widen(t, args.e);
+		if(t.h > 1.0f || t.l < 0.0f) return nullptr;
+	}
+	return nullptr;
+}
+
+void split(std::vector<SubArgs>& s, const SubArgs& args){
+	ival2 u = split(args.uvt.x);
+	ival2 v = split(args.uvt.y);
+	s.push_back({ival3(u.x, v.x, args.uvt.z), args.e*0.5f, args.depth+1});
+	s.push_back({ival3(u.x, v.y, args.uvt.z), args.e*0.5f, args.depth+1});
+	s.push_back({ival3(u.y, v.x, args.uvt.z), args.e*0.5f, args.depth+1});
+	s.push_back({ival3(u.y, v.y, args.uvt.z), args.e*0.5f, args.depth+1});
+}
+
+void subdivide(const Camera& cam, GLScreen& buf, const ival2& uv, int start_depth, float e){
+	int depth = start_depth;
+	const int max_depth = 8;
+	vector<SubArgs> stack;
+	stack.reserve(4);
+	stack.push_back({{uv.x, uv.y, {0.0f, 1.0f}}, e, depth});
+	while(!stack.empty()){
+		SubArgs args = stack.back();
+		stack.pop_back();
+		ival *t = trace(cam, args);
+		if(t){
+			if(args.depth < max_depth){
+				args.uvt.z = *t;
+				split(stack, args);
+			}
+			else
+				buf.paint(args.uvt);
+			delete t;
+		}
+	}
 }
 
 #endif

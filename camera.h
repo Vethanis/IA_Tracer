@@ -3,9 +3,7 @@
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtx/rotate_vector.hpp"
 #include <algorithm>
-#include "glmprint.h"
 
 #define up_vec glm::vec3(0.0f, 1.0f, 0.0f)
 

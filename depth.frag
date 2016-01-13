@@ -27,7 +27,8 @@ vec2 map(in vec3 a, in vec3 b){
 	return isphere(
 		vec2(min(a.x, b.x), max(a.x, b.x)), 
 		vec2(min(a.y, b.y), max(a.y, b.y)), 
-		vec2(min(a.z, b.z), max(a.z, b.z)), 1.0f);
+		vec2(min(a.z, b.z), max(a.z, b.z)), 
+		1.0f);
 }
 
 vec3 getPos(vec2 uv, float t){
