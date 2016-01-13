@@ -35,6 +35,7 @@ struct ival{
 	inline float width()const{ return h - l; }
 	inline float center()const{ return 0.5f*(l+h); }
 	inline bool contains(float s){ return l <= s && h > s; }
+	inline void widen(float s){ l -= s; h += s; }
 };
 
 inline ival opUnion(ival a, ival b){

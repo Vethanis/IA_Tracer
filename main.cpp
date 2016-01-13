@@ -34,30 +34,28 @@ inline ival map(const ival3& p){
 // returns ival in [0, 1] range for z
 ival* trace(const Camera& c, const SubArgs& args){
 	ival t = args.uvt.z;
-	ival d = map(getInterval(c, args.uvt, t));
-	cout << "F(B): "; print(d);
-	if(!d.contains(0.0f)) return nullptr;
-	for(int i = 1; i < 60; i++){
+	//ival d = map(getInterval(c, args.uvt, t));
+	//cout << "F(B): "; print(d);
+	//if(!d.contains(0.0f)) return nullptr;
+	for(int i = 1; i < 30; i++){
 		ival2 ts = split(t);
-		d = map(getInterval(c, args.uvt, t));
-		cout << "F(B): "; print(d);
+		ival d = map(getInterval(c, args.uvt, ts.x));
+		//printf("near F(B) in [%.3f, %.3f]: ", ts.x.l, ts.x.h); print(d);
 		if(d.contains(0.0f)){
 			t = ts.x;
 			if(t.width() < args.e)
 				return new ival(t);
 			continue;
 		}
-		d = map(getInterval(c, args.uvt, t));
-		cout << "F(B): "; print(d);
+		d = map(getInterval(c, args.uvt, ts.y));
+		//printf("far F(B) in [%.3f, %.3f]: ", ts.y.l, ts.y.h); print(d);
 		if(d.contains(0.0f)){
 			t = ts.y;
 			if(t.width() < args.e)
 				return new ival(t);
 			continue;
 		}
-		float dd = t.center();
-		t.l += dd;
-		t.h += dd*2.0f;
+		t.widen(args.e);
 		if(t.h >= args.uvt.z.h) return nullptr;
 	}
 	return nullptr;
@@ -73,26 +71,28 @@ void split(std::vector<SubArgs>& s, const SubArgs& args){
 }
 
 void subdivide(unsigned p, const Camera& cam, ZPyramid& pyr, const ival2& uv, float e){
-	int depth = pyr.getDepthFromP(p);
-	cout << "Starting Depth: " << depth << endl;
-	const int max_depth = pyr.getMaxDepth();
-	cout << "Max Depth: " << max_depth << endl;
+	int depth = 3;
+	//cout << "Starting Depth: " << depth << endl;
+	const int max_depth = 8;//pyr.getMaxDepth();
+	//cout << "Max Depth: " << max_depth << endl;
 	vector<SubArgs> stack;
 	stack.push_back({{uv.x, uv.y, {0.0f, 1.0f}}, e, depth});
 	while(!stack.empty()){
 		SubArgs args = stack.back();
 		stack.pop_back();
-		cout << "Depth: " << args.depth << endl;
-		cout << "B0: "; print(args.uvt);
+		//cout << "Depth: " << args.depth << endl;
+		//cout << "B0: "; print(args.uvt);
 		ival *t = trace(cam, args);
 		if(t){
-			if(t->h < pyr(args.depth, args.uvt.x.center(), args.uvt.y.center())){
+			//cout << "B1: "; print(args.uvt);
+			if(args.depth < max_depth){
+				t->l -= args.e;
+				t->h += args.e;
 				args.uvt.z = *t;
-				cout << "B1: "; print(args.uvt);
-				pyr.paint(args.depth, args.uvt);
-				if(args.depth <= max_depth)
-					split(stack, args);
+				split(stack, args);
 			}
+			else
+				pyr.paint(max_depth, args.uvt);
 			delete t;
 		}
 	}
@@ -110,9 +110,10 @@ int main(int argc, char* argv[]){
 	const int WIDTH = atoi(argv[1]);
 	const int HEIGHT = atoi(argv[2]);
 	const unsigned threads = stoul(argv[3]);
+	const unsigned regions = 4*threads;
 	
 	std::vector<ival2> uvs;
-	getStartingUVs(threads, uvs);
+	getStartingUVs(regions, uvs);
 
 	const float dx = 2.0f / WIDTH;
 	const float dy = 2.0f / HEIGHT;
@@ -129,7 +130,7 @@ int main(int argc, char* argv[]){
 	camera.resize(WIDTH, HEIGHT);
 	camera.update();
     
-	vec3 ambient(0.1f, 0.05f, 0.05f);
+	vec3 ambient(0.001f, 0.0005f, 0.0005f);
     vec3 light_pos(2.f, 2.f, 2.f);
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
@@ -149,8 +150,8 @@ int main(int argc, char* argv[]){
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
 			light_pos = ro;
 
-		#pragma omp parallel for num_threads(threads) schedule(static, 1)
-		for(unsigned k = 0; k < threads; k++){
+		#pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
+		for(unsigned k = 0; k < regions; k++){
 			subdivide(threads, camera, pyramid, uvs[k], 0.1f);
 		}
 		
@@ -171,6 +172,8 @@ int main(int argc, char* argv[]){
 			const float D = std::max(0.0f, dot(N, L));
 			const float S = pow(std::max(0.0f, dot(H, N)), 16.0f);
 			vec3 color = ambient + (D * base_color + S * light_color * base_color) / distSquared(light_pos, pos);
+			//color = vec3(1.0f / (3.33f*z*z));
+			//color = N;
 			color = pow(color, vec3(1.0f/2.2f));
 			screen.setPixel(k, color);
 		}
