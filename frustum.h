@@ -20,7 +20,8 @@ inline ival3 getInterval(const Camera& c, const ival3& uvt){
 
 // for bisection without mutating input uvt
 inline ival3 getInterval(const Camera& c, const ival3& uvt, ival t){
-	ival3 i(c.getPoint(uvt.x.l, uvt.y.l, t.l), c.getPoint(uvt.x.l, uvt.y.l, t.h));
+	ival3 i(       c.getPoint(uvt.x.l, uvt.y.l, t.l),
+	               c.getPoint(uvt.x.l, uvt.y.l, t.h));
 	i = opUnion(i, c.getPoint(uvt.x.l, uvt.y.h, t.l));
 	i = opUnion(i, c.getPoint(uvt.x.l, uvt.y.h, t.h));
 	i = opUnion(i, c.getPoint(uvt.x.h, uvt.y.l, t.l));
@@ -31,7 +32,7 @@ inline ival3 getInterval(const Camera& c, const ival3& uvt, ival t){
 }
 
 // dont use odd thread count
-void getStartingUVs(unsigned threads, std::vector<ival2>& uvs){
+void getStartingUVs(unsigned threads, std::vector<ival2>& uvs, int& depth_out){
 	unsigned divx = 0;
 	unsigned divy = 0;
 	unsigned p = 1;
@@ -58,6 +59,7 @@ void getStartingUVs(unsigned threads, std::vector<ival2>& uvs){
 		uvs.push_back(ival2(xmin, xmin+dx, ymin, ymin+dy));
 		//print(uvs.back());
 	}
+	depth_out = std::min(divx, divy);
 }
 
 #endif

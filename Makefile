@@ -34,7 +34,7 @@ release: CXXFLAGS += -O2
 release: $(EXE)
 
 run:	$(EXE)
-	./$(EXE) 640 360 4
+	./$(EXE) 512 512 1
 
 clean:
 	rm *.o $(EXE)

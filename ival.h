@@ -53,7 +53,17 @@ inline ival opUnion(ival a, float b){
 	a.h = std::max(a.h, b);
 	return a;
 }
+inline ival opUnion(float b, ival a){
+	a.l = std::min(a.l, b);
+	a.h = std::max(a.h, b);
+	return a;
+}
 inline ival opInter(float a, ival b){
+	b.l = std::max(a, b.l);
+	b.h = std::min(a, b.h);
+	return b;
+}
+inline ival opInter(ival b, float a){
 	b.l = std::max(a, b.l);
 	b.h = std::min(a, b.h);
 	return b;
@@ -264,6 +274,12 @@ inline ival3 opInter(const ival3& a, const ival3& b){
 }
 inline ival3 opUnion(const ival3& a, const glm::vec3& b){
 	return ival3(opUnion(a.x, b.x), opUnion(a.y, b.y), opUnion(a.z, b.z));
+}
+inline ival3 opUnion(const glm::vec3& a, const ival3& b){
+	return ival3(opUnion(a.x, b.x), opUnion(a.y, b.y), opUnion(a.z, b.z));
+}
+inline ival3 opInter(const ival3& a, const glm::vec3& b){
+	return ival3(opInter(a.x, b.x), opInter(a.y, b.y), opInter(a.z, b.z));
 }
 inline ival3 opInter(const glm::vec3& a, const ival3& b){
 	return ival3(opInter(a.x, b.x), opInter(a.y, b.y), opInter(a.z, b.z));

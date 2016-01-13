@@ -69,25 +69,18 @@ public:
 			}
 		}
 	}
-	inline unsigned getDepthFromP(unsigned threads){
-		unsigned divx = 0;
-		unsigned divy = 0;
-		unsigned p = 1;
-		while(p < threads){
-			if(divy < divx){
-				divy++;
-				p = p << 1;
-			}
-			else {
-				divx++;
-				p = p << 1;
+	inline void blur(){
+		for(int r = 1; r < sizes[max_depth].y-1; r++){
+			for(int c = 1; c < sizes[max_depth].x-1; c++){
+				float avg = 0.0f;
+				for(int dr = r-1; dr < r+2; dr++){
+					for(int dc = c-1; dc < c+2; dc++){
+						avg += buffer[max_depth][dr][dc];
+					}
+				}
+				buffer[max_depth][r][c] = 0.11111111f * avg;
 			}
 		}
-		int res = (1<<divx)*(1<<divy);
-		unsigned depth = 0;
-		while(sizes[depth].x*sizes[depth].y < res)
-			depth++;
-		return depth;
 	}
 
 #ifdef DEBUG

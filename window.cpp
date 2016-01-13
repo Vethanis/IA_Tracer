@@ -29,7 +29,7 @@ Window::Window(int width, int height, int major_ver, int minor_ver, const string
         exit(1);
     }
     glGetError();	// invalid enumerant shows up here, just part of glew being itself.
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 }
 
 Window::~Window(){

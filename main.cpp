@@ -6,10 +6,10 @@
 #include "glprogram.h"
 #include "debugmacro.h"
 #include "glscreen.h"
-#include "zpyramid.h"
 #include "glm/gtx/compatibility.hpp"
 #include "glmprint.h"
 #include "frustum.h"
+#include "depthbuffer.h"
 #include <string>
 #include "omp.h"
 
@@ -34,13 +34,9 @@ inline ival map(const ival3& p){
 // returns ival in [0, 1] range for z
 ival* trace(const Camera& c, const SubArgs& args){
 	ival t = args.uvt.z;
-	//ival d = map(getInterval(c, args.uvt, t));
-	//cout << "F(B): "; print(d);
-	//if(!d.contains(0.0f)) return nullptr;
-	for(int i = 1; i < 30; i++){
+	for(int i = 0; i < 32; i++){
 		ival2 ts = split(t);
 		ival d = map(getInterval(c, args.uvt, ts.x));
-		//printf("near F(B) in [%.3f, %.3f]: ", ts.x.l, ts.x.h); print(d);
 		if(d.contains(0.0f)){
 			t = ts.x;
 			if(t.width() < args.e)
@@ -48,7 +44,6 @@ ival* trace(const Camera& c, const SubArgs& args){
 			continue;
 		}
 		d = map(getInterval(c, args.uvt, ts.y));
-		//printf("far F(B) in [%.3f, %.3f]: ", ts.y.l, ts.y.h); print(d);
 		if(d.contains(0.0f)){
 			t = ts.y;
 			if(t.width() < args.e)
@@ -56,7 +51,7 @@ ival* trace(const Camera& c, const SubArgs& args){
 			continue;
 		}
 		t.widen(args.e);
-		if(t.h >= args.uvt.z.h) return nullptr;
+		if(t.h > 1.0f || t.l < 0.0f) return nullptr;
 	}
 	return nullptr;
 }
@@ -70,29 +65,22 @@ void split(std::vector<SubArgs>& s, const SubArgs& args){
 	s.push_back({ival3(u.y, v.y, args.uvt.z), args.e*0.5f, args.depth+1});
 }
 
-void subdivide(unsigned p, const Camera& cam, ZPyramid& pyr, const ival2& uv, float e){
-	int depth = 3;
-	//cout << "Starting Depth: " << depth << endl;
-	const int max_depth = 8;//pyr.getMaxDepth();
-	//cout << "Max Depth: " << max_depth << endl;
+void subdivide(unsigned p, const Camera& cam, DepthBuffer& buf, const ival2& uv, int start_depth, float e){
+	int depth = start_depth;
+	const int max_depth = 8;
 	vector<SubArgs> stack;
 	stack.push_back({{uv.x, uv.y, {0.0f, 1.0f}}, e, depth});
 	while(!stack.empty()){
 		SubArgs args = stack.back();
 		stack.pop_back();
-		//cout << "Depth: " << args.depth << endl;
-		//cout << "B0: "; print(args.uvt);
 		ival *t = trace(cam, args);
 		if(t){
-			//cout << "B1: "; print(args.uvt);
 			if(args.depth < max_depth){
-				t->l -= args.e;
-				t->h += args.e;
 				args.uvt.z = *t;
 				split(stack, args);
 			}
 			else
-				pyr.paint(max_depth, args.uvt);
+				buf.paint(args.uvt);
 			delete t;
 		}
 	}
@@ -110,10 +98,10 @@ int main(int argc, char* argv[]){
 	const int WIDTH = atoi(argv[1]);
 	const int HEIGHT = atoi(argv[2]);
 	const unsigned threads = stoul(argv[3]);
-	const unsigned regions = 4*threads;
-	
+	const unsigned regions = threads;
+	int start_depth = 0;
 	std::vector<ival2> uvs;
-	getStartingUVs(regions, uvs);
+	getStartingUVs(regions, uvs, start_depth);
 
 	const float dx = 2.0f / WIDTH;
 	const float dy = 2.0f / HEIGHT;
@@ -122,8 +110,7 @@ int main(int argc, char* argv[]){
 	GLProgram prog("shader.vert", "shader.frag");
 	prog.bind();
 	GLScreen screen(WIDTH, HEIGHT);
-	ZPyramid pyramid(WIDTH, HEIGHT);
-	const int pf = pyramid.getMaxDepth();
+	DepthBuffer zbuf(WIDTH, HEIGHT);
 	
 	Camera camera;
 	camera.setEye({0.0f, 0.0f, 3.0f});
@@ -135,9 +122,6 @@ int main(int argc, char* argv[]){
 	vec3 light_color(1.0f);
 	vec3 base_color(0.5f, 0.1f, 0.01f);
 	
-	
-	//subdivide(threads, camera, pyramid, uvs[0], 0.1f);
-	//return 0;
 	
 	input.poll();
     unsigned i = 0;
@@ -152,7 +136,7 @@ int main(int argc, char* argv[]){
 
 		#pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
 		for(unsigned k = 0; k < regions; k++){
-			subdivide(threads, camera, pyramid, uvs[k], 0.1f);
+			subdivide(threads, camera, zbuf, uvs[k], start_depth, 0.5f);
 		}
 		
 		#pragma omp parallel for num_threads(threads) schedule(dynamic, 12)
@@ -161,18 +145,18 @@ int main(int argc, char* argv[]){
 			const int r = clamp(k / HEIGHT, 1, HEIGHT-2);
 			const float x = c*dx - 1.0f;
 			const float y = r*dy - 1.0f;
-			const float z = pyramid(pf, x, y);
+			const float z = zbuf[k];
 			if(z == 1.0f) continue;
 			vec3 pos = camera.getPoint(x, y, z);
-			vec3 xv = camera.getPoint(x+dx, y, pyramid(pf, x+dx, y)) - pos;
-			vec3 yv = camera.getPoint(x, y+dy, pyramid(pf, x, y+dy)) - pos;
+			vec3 xv = camera.getPoint(x+dx, y, zbuf[k+1]) - pos;
+			vec3 yv = camera.getPoint(x, y+dy, zbuf[k+WIDTH]) - pos;
 			vec3 N = normalize(cross(xv, yv));
 			vec3 L = normalize(light_pos - pos);
 			vec3 H = normalize(L + normalize(ro - pos));
 			const float D = std::max(0.0f, dot(N, L));
 			const float S = pow(std::max(0.0f, dot(H, N)), 16.0f);
 			vec3 color = ambient + (D * base_color + S * light_color * base_color) / distSquared(light_pos, pos);
-			//color = vec3(1.0f / (3.33f*z*z));
+			//color = vec3(1.0f / (3.0f*z*z*z));
 			//color = N;
 			color = pow(color, vec3(1.0f/2.2f));
 			screen.setPixel(k, color);
@@ -182,7 +166,7 @@ int main(int argc, char* argv[]){
         glfwSwapBuffers(window.getWindow());    	
         glClear(GL_COLOR_BUFFER_BIT);
     	screen.clear();
-    	pyramid.clear(1.0f);
+    	zbuf.clear();
     	
         i++;
         if(i >= 60){
