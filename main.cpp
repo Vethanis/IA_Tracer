@@ -6,6 +6,8 @@
 #include "input.h"
 #include "glprogram.h"
 #include "glscreen.h"
+#include "texture.h"
+#include "compute_shader.h"
 
 using namespace std;
 using namespace glm;
@@ -24,48 +26,74 @@ double frameBegin(unsigned& i, double& t){
 }
 
 int main(int argc, char* argv[]){
-	if(argc < 2){
+	if(argc != 3){
 		cout << argv[0] << " <screen width> <screen height>" << endl;
 		return 1;
 	}
 	Camera camera;
 	const int WIDTH = atoi(argv[1]);
 	const int HEIGHT = atoi(argv[2]);
-	const float dx = 2.0f / WIDTH;
-	const float dy = 2.0f / HEIGHT;
+	vec2 ddx(2.0f/WIDTH, 0.0f);
+	vec2 ddy(0.0f, 2.0f/HEIGHT);
 	camera.setEye({0.0f, 0.0f, 3.0f});
 	camera.resize(WIDTH, HEIGHT);
 	camera.update();
 	
-	Window window(WIDTH, HEIGHT, 3, 3, "IA Beam Casting");
+	Window window(WIDTH, HEIGHT, 4, 3, "IA Ray Casting");
 	Input input(window.getWindow());
-	GLProgram depthProg("fullscreen.vert", "depth.frag");
-	GLProgram colorProg("fullscreen.vert", "color.frag");
+	ComputeShader depthProg("depth.glsl");
+	unsigned callsizeX = WIDTH / 8 + (WIDTH % 8) ? 1 : 0;
+	unsigned callsizeY = HEIGHT / 8 + (HEIGHT % 8) ? 1 : 0;
+	GLProgram colorProg("fullscreen.glsl", "color.glsl");
 	GLScreen screen(WIDTH, HEIGHT);
+	Texture dbuf(WIDTH, HEIGHT, DEPTH);
 	
     vec3 light_pos(1.1f, 1.1f, 1.5f);
+    colorProg.bind();
 	colorProg.setUniform("ambient", vec3(0.001f, 0.0005f, 0.0005f));
 	colorProg.setUniform("light_color", vec3(1.0f));
 	colorProg.setUniform("base_color", vec3(0.5f, 0.1f, 0.01f));
 	colorProg.setUniform("light_pos", light_pos);
-	colorProg.setUniformFloat("dx", dx);
-	colorProg.setUniformFloat("dy", dy);
+	colorProg.setUniform("ddx", ddx);
+	colorProg.setUniform("ddy", ddy);
+	colorProg.setUniformFloat("near", camera.getNear());
+	colorProg.setUniformFloat("far", camera.getFar());
+	colorProg.setUniformInt("dbuf", 0);
+	
+	depthProg.bind();
+	depthProg.setUniformFloat("near", camera.getNear());
+	depthProg.setUniformFloat("far", camera.getFar());
+	depthProg.setUniformInt("dbuf", 0);
+	
+	dbuf.bind(0);
 	
 	input.poll();
     unsigned i = 0;
     double t = glfwGetTime();
-    while(window.alive()){
+    while(window.open()){
         input.poll(frameBegin(i, t), camera);
 		
+		vec3 tl = camera.getRay(-1.0f,  1.0f);
+		vec3 tr = camera.getRay( 1.0f,  1.0f);
+		vec3 bl = camera.getRay(-1.0f, -1.0f);
+		vec3 br = camera.getRay( 1.0f, -1.0f);
+		
 		depthProg.bind();
-		depthProg.setUniform("IVP", camera.getIVP());
-		screen.draw();
+		depthProg.setUniform("eye", camera.getEye());
+		depthProg.setUniform("tl", tl);
+		depthProg.setUniform("tr", tr);
+		depthProg.setUniform("bl", bl);
+		depthProg.setUniform("br", br);
+		depthProg.call(callsizeX, callsizeY, 1);
 		
 		colorProg.bind();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
 			colorProg.setUniform("light_pos", camera.getEye());
-		colorProg.setUniform("IVP", camera.getIVP());
 		colorProg.setUniform("eye", camera.getEye());
+		colorProg.setUniform("tl", tl);
+		colorProg.setUniform("tr", tr);
+		colorProg.setUniform("bl", bl);
+		colorProg.setUniform("br", br);
 		screen.draw();
 		
         window.swap();

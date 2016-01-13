@@ -17,10 +17,12 @@ Shader::Shader(const char* src_path, GLenum type){
     int infoLogLength;
     glCompileShader(handle);
     glGetShaderiv(handle, GL_COMPILE_STATUS, &result);
-    glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &infoLogLength);
-    std::vector<char> shaderErrorMessage( std::max( infoLogLength, int(1) ) );
-    glGetShaderInfoLog(handle, infoLogLength, NULL, &shaderErrorMessage[0]);
-    fprintf(stdout, "%s\n", &shaderErrorMessage[0]);
+    if(!result){
+		glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &infoLogLength);
+		std::vector<char> shaderErrorMessage( std::max( infoLogLength, int(1) ) );
+		glGetShaderInfoLog(handle, infoLogLength, NULL, &shaderErrorMessage[0]);
+		fprintf(stdout, "%s\n", &shaderErrorMessage[0]);
+	}
     MYGLERRORMACRO
 }
 

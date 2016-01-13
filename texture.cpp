@@ -1,0 +1,54 @@
+#include "myglheaders.h"
+#include "texture.h"
+#include "debugmacro.h"
+
+
+Texture::Texture(unsigned w, unsigned h, TEXTURETYPE t){
+	width = w; height = h; type = t;
+	
+	glGenTextures(1, &tex_id);MYGLERRORMACRO
+	glBindTexture(GL_TEXTURE_2D, tex_id);MYGLERRORMACRO
+	
+	switch(type){
+	case COLOR:{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);MYGLERRORMACRO
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);MYGLERRORMACRO
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);MYGLERRORMACRO
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);MYGLERRORMACRO
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);MYGLERRORMACRO
+		glGenerateMipmap(GL_TEXTURE_2D);MYGLERRORMACRO
+		}
+		break;
+	case DEPTH:{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);MYGLERRORMACRO
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);MYGLERRORMACRO
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);MYGLERRORMACRO
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);MYGLERRORMACRO
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, NULL);MYGLERRORMACRO
+		}
+		break;
+	case MATERIAL:{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);MYGLERRORMACRO
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);MYGLERRORMACRO
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);MYGLERRORMACRO
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);MYGLERRORMACRO
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);MYGLERRORMACRO
+		}
+		break;
+	}
+	
+	glBindTexture(GL_TEXTURE_2D, 0);
+	MYGLERRORMACRO
+}
+
+Texture::~Texture(){
+	glDeleteTextures(1, &tex_id);
+	MYGLERRORMACRO
+}
+
+void Texture::bind(unsigned channel){
+	glActiveTexture(GL_TEXTURE0 + channel);MYGLERRORMACRO
+	glBindTexture(GL_TEXTURE_2D, tex_id);
+	MYGLERRORMACRO
+}
+

@@ -24,10 +24,12 @@ GLProgram::GLProgram(const char* vert_path, const char* frag_path){
     int infoLogLength;
 
     glGetProgramiv(progHandle, GL_LINK_STATUS, &result);
-    glGetProgramiv(progHandle, GL_INFO_LOG_LENGTH, &infoLogLength);
-    std::vector<char> ProgramErrorMessage( std::max(infoLogLength, int(1)) );
-    glGetProgramInfoLog(progHandle, infoLogLength, NULL, &ProgramErrorMessage[0]);
-    fprintf(stdout, "%s\n", &ProgramErrorMessage[0]);
+    if(!result){
+		glGetProgramiv(progHandle, GL_INFO_LOG_LENGTH, &infoLogLength);
+		std::vector<char> ProgramErrorMessage( std::max(infoLogLength, int(1)) );
+		glGetProgramInfoLog(progHandle, infoLogLength, NULL, &ProgramErrorMessage[0]);
+		fprintf(stdout, "%s\n", &ProgramErrorMessage[0]);
+	}
     MYGLERRORMACRO
 }
 
@@ -44,7 +46,7 @@ void GLProgram::bind(){
 int GLProgram::getUniformLocation(const std::string& name){
 	auto iter = uniforms.find(name);
 	if(iter == end(uniforms)){
-		const unsigned v = glGetUniformLocation(progHandle, name.c_str());
+		const int v = glGetUniformLocation(progHandle, name.c_str());
 		uniforms[name] = v;
 		return v;
 	}

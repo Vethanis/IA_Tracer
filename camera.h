@@ -1,9 +1,6 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#define GLM_FORCE_AVX
-#include "glm/gtx/simd_vec4.hpp"
-#include "glm/gtx/simd_mat4.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include <algorithm>
@@ -26,7 +23,7 @@ class Camera{
 	float m_fov, m_whratio, m_near, m_far, m_yaw, m_pitch;
 public:
     Camera(float fov=45.0f, float ratio=16.0f/9.0f, float near=0.1f, 
-    	float far=5.0f, const glm::vec3& eye=glm::vec3(0.0f), 
+    	float far=10.0f, const glm::vec3& eye=glm::vec3(0.0f), 
     	const glm::vec3& at=glm::vec3(0.0f, 0.0f, -1.0f)) 
     	: m_eye(eye), m_at(at), m_fov(fov), m_whratio(ratio), m_near(near), m_far(far){
 		P = glm::perspective(m_fov, m_whratio, m_near, m_far);
@@ -63,7 +60,7 @@ public:
 		temp = temp / temp.w;
 		return glm::normalize(glm::vec3(temp) - m_eye);
 	}
-	// returns world coords, xyz in [-1, 1]
+	// returns world coords, xyz in ndc[-1, 1]
 	// 32 flops
 	inline glm::vec3 getPoint(float x, float y, float z)const{
 		glm::vec4 ndc(x, y, z, 1.0f);
