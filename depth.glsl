@@ -70,14 +70,17 @@ vec2 isphere(vec2 x, vec2 y, vec2 z, float r){
 	return ipow2(x) + ipow2(y) + ipow2(z) - r*r;
 }
 vec2 ibox(vec3 l, vec3 h, vec3 c, vec3 d){
-	vec3 lopos = c - d;
-	vec3 hipos = c + d;
-	float lv = -imax(lopos - l);
-	float hv = imax(hipos - h);
-	return vec2(lv, hv);
+	vec3 a = c - d;
+	vec3 b = c + d;
+	vec3 la = l - a;
+	vec3 lb = l - b;
+	vec3 ha = h - a;
+	vec3 hb = h - b;
+	return vec2(imax(imin(la, lb)), imin(imax(ha, hb)));
+	
 }
 bool contains(vec2 a, float s){
-	return a.x <= s && a.y > s;
+	return a.x <= s && a.y >= s;
 }
 float width(vec2 a){
 	return a.y - a.x;
