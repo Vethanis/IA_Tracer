@@ -72,9 +72,9 @@ bool invalid(vec2 t){
 
 vec2 map(in vec3 a, in vec3 b){
 	return ipow2(isphere(
-		vec2(a.x, b.x), 
-		vec2(a.y, b.y), 
-		vec2(a.z, b.z), 
+		vec2(min(a.x, b.x), max(a.x, b.x)), 
+		vec2(min(a.y, b.y), max(a.y, b.y)), 
+		vec2(min(a.z, b.z), max(a.z, b.z)), 
 		1.f));
 }
 
@@ -84,18 +84,18 @@ vec3 getPos(in vec2 uv, in float z){
 	return vec3(t / t.w);
 }
 
-vec2 trace(vec3 p0, vec3 p1, vec2 t, float e){
+vec2 trace(vec2 uv, vec2 t, float e){
 	for(int i = 0; i < 60; i++){
 		vec2 t0 = vec2(t.x, center(t));
-		vec2 F = map(mix(p0, p1, t0.x), mix(p0, p1, t0.y));
+		vec2 F = map(getPos(uv, t0.x), getPos(uv, t0.y));
 		if(contains(F, 0.0f)){
 			t = t0;
 			if(width(t) < e)
 				return t;
-			continue
+			continue;
 		}
 		t0 = vec2(t0.y, t.y);
-		F = map(mix(p0, p1, t0.x), mix(p0, p1, t0.y));
+		F = map(getPos(uv, t0.x), getPos(uv, t0.y));
 		if(contains(F, 0.0f)){
 			t = t0;
 			if(width(t) < e)
@@ -115,11 +115,6 @@ void main(){
 	if (pix.x >= size.x || pix.y >= size.y) return;
 	vec2 uv = vec2(pix) / vec2(size.x - 1, size.y - 1);
 	uv = uv * 2. - 1.;
-	vec2 t = vec2(0., 1.);
-	vec3 p0 = getPos(uv, t.x);
-	vec3 p1 = getPos(uv, t.y);
-	vec3 i0 = vec3(min(p0.x, p1.x), min(p0.y, p1.y), min(p0.z, p1.z));
-	vec3 i0 = vec3(max(p0.x, p1.x), max(p0.y, p1.y), max(p0.z, p1.z));
-	float depth = center(trace(i0, i1, t, 0.00001f));
+	float depth = center(trace(uv, vec2(0., 1.), 0.00001f));
 	imageStore(dbuf, pix, vec4(depth));
 }
