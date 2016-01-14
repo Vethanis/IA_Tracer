@@ -33,6 +33,18 @@ vec2 imin(vec2 a, vec2 b){
 vec2 imax(vec2 a, vec2 b){
 	return vec2(max(a.x,b.x),max(a.y,b.y));
 }
+vec3 imin(vec3 a, vec3 b){
+	return vec3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
+}
+vec3 imax(vec3 a, vec3 b){
+	return vec3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+}
+float imin(vec3 a){
+	return min(min(a.x, a.y), a.z);
+}
+float imax(vec3 a){
+	return max(max(a.x, a.y), a.z);
+}
 vec2 iadd(vec2 a, vec2 b){
 	return a + b;
 }
@@ -54,8 +66,15 @@ vec2 ismoothmax(vec2 a, vec2 b, float r){
 	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0)));
 	return iadd(imax(a, b), imul(ipow2(e), 0.25/r));
 }
-vec2 isphere(in vec2 x, in vec2 y, in vec2 z, float r){
+vec2 isphere(vec2 x, vec2 y, vec2 z, float r){
 	return ipow2(x) + ipow2(y) + ipow2(z) - r*r;
+}
+vec2 ibox(vec3 l, vec3 h, vec3 c, vec3 d){
+	vec3 lopos = c - d;
+	vec3 hipos = c + d;
+	float lv = -imax(lopos - l);
+	float hv = imax(hipos - h);
+	return vec2(lv, hv);
 }
 bool contains(vec2 a, float s){
 	return a.x <= s && a.y > s;
@@ -71,11 +90,7 @@ bool invalid(vec2 t){
 }
 
 vec2 map(in vec3 a, in vec3 b){
-	return ipow2(isphere(
-		vec2(min(a.x, b.x), max(a.x, b.x)), 
-		vec2(min(a.y, b.y), max(a.y, b.y)), 
-		vec2(min(a.z, b.z), max(a.z, b.z)), 
-		1.f));
+	return ibox(imin(a, b), imax(a, b), vec3(0.), vec3(1.));
 }
 
 vec3 getPos(in vec2 uv, in float z){
