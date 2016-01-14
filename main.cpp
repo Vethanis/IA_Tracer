@@ -56,12 +56,8 @@ int main(int argc, char* argv[]){
 	colorProg.setUniform("light_pos", light_pos);
 	colorProg.setUniform("ddx", ddx);
 	colorProg.setUniform("ddy", ddy);
-	colorProg.setUniformFloat("near", camera.getNear());
-	colorProg.setUniformFloat("far", camera.getFar());
 	
 	depthProg.bind();
-	depthProg.setUniformFloat("near", camera.getNear());
-	depthProg.setUniformFloat("far", camera.getFar());
 	
 	cout << callsizeX << endl;
 	cout << callsizeY << endl;
@@ -73,17 +69,8 @@ int main(int argc, char* argv[]){
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
 		
-		vec3 tl = camera.getRay(-1.0f,  1.0f);
-		vec3 tr = camera.getRay( 1.0f,  1.0f);
-		vec3 bl = camera.getRay(-1.0f, -1.0f);
-		vec3 br = camera.getRay( 1.0f, -1.0f);
-		
 		depthProg.bind();
-		depthProg.setUniform("eye", camera.getEye());
-		depthProg.setUniform("tl", tl);
-		depthProg.setUniform("tr", tr);
-		depthProg.setUniform("bl", bl);
-		depthProg.setUniform("br", br);
+		depthProg.setUniform("IVP", camera.getIVP());
 		glBindImageTexture(0, dbuf.getID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
 		depthProg.call(callsizeX, callsizeY, 1);
 		
@@ -94,10 +81,7 @@ int main(int argc, char* argv[]){
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
 			colorProg.setUniform("light_pos", camera.getEye());
 		colorProg.setUniform("eye", camera.getEye());
-		colorProg.setUniform("tl", tl);
-		colorProg.setUniform("tr", tr);
-		colorProg.setUniform("bl", bl);
-		colorProg.setUniform("br", br);
+		colorProg.setUniform("IVP", camera.getIVP());
 		dbuf.bind(0);
 		colorProg.setUniformInt("dbuf", 0);
 		screen.draw();
