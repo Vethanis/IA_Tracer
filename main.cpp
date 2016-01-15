@@ -47,7 +47,7 @@ int main(int argc, char* argv[]){
 	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
 	GLProgram colorProg("fullscreen.glsl", "color.glsl");
 	GLScreen screen;
-	Texture dbuf(WIDTH, HEIGHT, DEPTH);
+	Texture dbuf(WIDTH, HEIGHT, FLOAT);
 	glBindImageTexture(0, dbuf.getID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
 	
     vec3 light_pos(3.0f, 3.0f, 3.0f);

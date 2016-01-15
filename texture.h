@@ -3,8 +3,18 @@
 
 enum TEXTURETYPE{
 	COLOR,
-	DEPTH,
-	MATERIAL
+	UBYTE,
+	UBYTE2,
+	UBYTE3,
+	SBYTE,
+	SBYTE2,
+	SBYTE3,
+	SINT,
+	SINT2,
+	SINT3,
+	FLOAT,
+	FLOAT2,
+	FLOAT3
 };
 
 class Texture{

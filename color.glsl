@@ -25,7 +25,7 @@ vec3 getPos(vec2 uv, float z){
 	return vec3(t / t.w);
 }
 
-#define DEPTH
+#define COLOR
 
 void main(){
 	vec2 suv = uv * 0.5 + 0.5;
@@ -34,15 +34,16 @@ void main(){
 	if(z >= 1.) discard;
 #endif
 #ifdef COLOR
-	vec3 pos = getPos(uv.xy, z);
-	vec3 xv  = getPos(uv.xy+ddx, texture(dbuf, suv+.5*ddx).r) - pos;
-	vec3 yv  = getPos(uv.xy+ddy, texture(dbuf, suv+.5*ddy).r) - pos;
-	vec3 N = normalize(cross(xv, yv));
+	vec3 pos   = getPos(uv.xy, z);
+	vec3 xtan  = getPos(uv.xy+ddx, texture(dbuf, suv+.5*ddx).r) - pos;
+	vec3 ytan  = getPos(uv.xy+ddy, texture(dbuf, suv+.5*ddy).r) - pos;
+	vec3 N = normalize(cross(xtan, ytan));
 	vec3 L = normalize(light_pos - pos);
 	vec3 H = normalize(L + normalize(eye - pos));
 	float D = max(0.0, dot(N, L));
 	float S = ( D > 0.0f ) ? pow(max(0., dot(H, N)), 32.) : 0.;
-	vec3 color = ambient + (D * base_color + S * light_color * base_color) * light_str / dot(light_pos - pos, light_pos - pos);
+	vec3 lvec = light_pos - pos;
+	vec3 color = ambient + (D * base_color + S * light_color * base_color) * light_str / dot(lvec, lvec);
 	out_color = vec4(pow(color, vec3(1.0f/2.2f)), 1.0);
 #endif
 #ifdef NORMAL
