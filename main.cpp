@@ -14,6 +14,54 @@
 using namespace std;
 using namespace glm;
 
+struct TPyramid{
+	// validity of a t is given by (t[id].x < 0.0f)
+	// all valid ranges of t are with in [0, 1]
+	// should have log2(max(width, height))-1 levels.
+	// final level is the depth texture
+	vec2 t9[4*4*4*4*4*4*4*4*4];
+	vec2 t8[4*4*4*4*4*4*4*4];
+	vec2 t7[4*4*4*4*4*4*4];
+	vec2 t6[4*4*4*4*4*4];
+	vec2 t5[4*4*4*4*4];
+	vec2 t4[4*4*4*4];
+	vec2 t3[4*4*4];
+	vec2 t2[4*4];
+	vec2 t1[4];
+	vec2 t0;
+	void clear(){
+		t0 = vec2(0.0f, 1.0f);
+		vec2 c(-1.0f, 1.0f);
+		for(auto& i : t1) i = c;
+		for(auto& i : t2) i = c;
+		for(auto& i : t3) i = c;
+		for(auto& i : t4) i = c;
+		for(auto& i : t5) i = c;
+		for(auto& i : t6) i = c;
+		for(auto& i : t7) i = c;
+		for(auto& i : t8) i = c;
+		for(auto& i : t9) i = c;
+	}
+	int uvToIndex(vec2 uv, int depth){
+		unsigned size = 1;
+		size = size << depth;
+		int r = (0.5f * uv.x + 0.5f) * size;
+		int c = (0.5f * uv.y + 0.5f) * size;
+		return r + size * c;
+	}
+	vec4 IndexToUV(int i, int depth){
+		unsigned size = 1;
+		size = size << depth;
+		int r = i % size;
+		int c = i / size;
+		float dx = 2.0f / size;
+		float dy = 2.0f / size;
+		float u = -1.0f + c * dx;
+		float v = -1.0f + r * dy;
+		return vec4(u, u+dx, v, v+dy);
+	}
+};
+
 double frameBegin(unsigned& i, double& t){
     double dt = glfwGetTime() - t;
     t += dt;
