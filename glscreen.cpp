@@ -2,7 +2,7 @@
 #include "myglheaders.h"
 #include "debugmacro.h"
 
-GLScreen::GLScreen(unsigned w, unsigned h) : width(w), height(h){
+GLScreen::GLScreen(){
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
     glBindVertexArray(vao);

@@ -127,7 +127,7 @@ vec2 widen(vec2 t){
 vec2 map(in vec3 a, in vec3 b){
 	vec2 x = ix(a, b); vec2 y = ix(a, b); vec2 z = ix(a, b);
 	vec3 l = imin(a, b); vec3 h = imax(a, b);
-	return isphere(x, y, z, vec3(0.), 1.);
+	//return isphere(x, y, z, vec3(0.), 1.);
 	return ibox(l, h, vec3(0.), vec3(1.));
 }
 

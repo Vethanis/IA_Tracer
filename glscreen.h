@@ -5,9 +5,9 @@
 #include "ival.h"
 
 class GLScreen{
-	unsigned width, height, vao, vbo;
+	unsigned vao, vbo;
 public:
-	GLScreen(unsigned w, unsigned h);
+	GLScreen();
 	~GLScreen();
 	void draw();
 };
