@@ -293,7 +293,7 @@ vec2 tracesub(vec4 uv, vec2 t){
 	stack[end] = ifar(t);	// push back interval
 	end++;
 	stack[end] = inear(t);	// push near interval
-	while(end >= 0 && end < sz){
+	while(end >= 0 && end < sz - 2){
 		vec2 cur = stack[end];	// pop
 		
 		p0 = getPos(uvlo, cur.x);
@@ -303,10 +303,8 @@ vec2 tracesub(vec4 uv, vec2 t){
 			if(width(cur) < epsilon)
 				return cur;
 			end++;	//push back interval
-			if(end == sz) return vec2(-1.0f);
 			stack[end] = ifar(cur);
 			end++;	//push front interval
-			if(end == sz) return vec2(-1.0f);
 			stack[end] = inear(cur);
 			continue;
 		}
