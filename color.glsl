@@ -15,6 +15,8 @@ uniform vec3 light_pos;
 uniform vec2 ddx;
 uniform vec2 ddy;
 
+uniform float light_str;
+
 out vec4 out_color;
 
 vec3 getPos(vec2 uv, float z){
@@ -40,7 +42,11 @@ void main(){
 	float D = max(0.0, dot(N, L));
 	float S = ( D > 0.0f ) ? pow(max(0., dot(H, N)), 32.) : 0.;
 #ifdef COLOR
-	vec3 color = ambient + (D * base_color + S * light_color * base_color) / dot(light_pos - pos, light_pos - pos);
+	vec3 color = ambient + (D * base_color + S * light_color * base_color) * light_str / dot(light_pos - pos, light_pos - pos);
+	color = pow(color, vec3(1.0f/2.2f));
+#endif
+#ifdef NORMALSHADED
+	vec3 color = ambient + (D * N + S * light_color * N) * light_str / dot(light_pos - pos, light_pos - pos);
 	color = pow(color, vec3(1.0f/2.2f));
 #endif
 #ifdef DEPTH

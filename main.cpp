@@ -42,22 +42,27 @@ int main(int argc, char* argv[]){
 	Window window(WIDTH, HEIGHT, 4, 3, "IA Ray Casting");
 	Input input(window.getWindow());
 	ComputeShader depthProg("depth.glsl");
+	ComputeShader clearProg("clear.glsl");
 	unsigned callsizeX = WIDTH / 8 + ((WIDTH % 8) ? 1 : 0);
 	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
 	GLProgram colorProg("fullscreen.glsl", "color.glsl");
 	GLScreen screen(WIDTH, HEIGHT);
 	Texture dbuf(WIDTH, HEIGHT, DEPTH);
+	glBindImageTexture(0, dbuf.getID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
 	
-    vec3 light_pos(1.1f, 1.1f, 1.5f);
+    vec3 light_pos(10.5f, 10.5f, 10.5f);
     colorProg.bind();
 	colorProg.setUniform("ambient", vec3(0.001f, 0.0005f, 0.0005f));
 	colorProg.setUniform("light_color", vec3(1.0f));
-	colorProg.setUniform("base_color", vec3(0.5f, 0.1f, 0.01f));
+	colorProg.setUniform("base_color", vec3(0.3f, 0.2f, 0.7f));
 	colorProg.setUniform("light_pos", light_pos);
 	colorProg.setUniform("ddx", ddx);
 	colorProg.setUniform("ddy", ddy);
+	colorProg.setUniformFloat("light_str", 20.0f);
 	
 	depthProg.bind();
+	depthProg.setUniformFloat("near", camera.getNear());
+	depthProg.setUniformFloat("far", camera.getFar());
 	
 	cout << callsizeX << endl;
 	cout << callsizeY << endl;
@@ -71,22 +76,24 @@ int main(int argc, char* argv[]){
 		
 		depthProg.bind();
 		depthProg.setUniform("IVP", camera.getIVP());
-		glBindImageTexture(0, dbuf.getID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+		depthProg.setUniform("eye", camera.getEye());
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		depthProg.call(callsizeX, callsizeY, 1);
 		
-		
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		
 		colorProg.bind();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
 			colorProg.setUniform("light_pos", camera.getEye());
-		colorProg.setUniform("eye", camera.getEye());
 		colorProg.setUniform("IVP", camera.getIVP());
+		colorProg.setUniform("eye", camera.getEye());
 		dbuf.bind(0);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		colorProg.setUniformInt("dbuf", 0);
 		screen.draw();
 		
         window.swap();
+        clearProg.bind();
+        clearProg.call(callsizeX, callsizeY, 1);
     }
     return 0;
 }

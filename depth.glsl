@@ -27,6 +27,12 @@ vec2 imul(vec2 b, float a){
 vec2 ipow2(vec2 a){	
 	return (a.x>=0.0)?vec2(a*a):(a.y<0.0)?vec2((a*a).yx):vec2(0.0,max(a.x*a.x,a.y*a.y));
 }
+vec2 ipow4(vec2 a){
+	return (a.x>=0.0)?vec2(a*a*a*a):(a.y<0.0)?vec2((a*a*a*a).yx):vec2(0.0,max(a.x*a.x*a.x*a.x,a.y*a.y*a.y*a.y));
+}
+vec2 ipow6(vec2 a){
+	return (a.x>=0.0)?vec2(a*a*a*a*a*a):(a.y<0.0)?vec2((a*a*a*a*a*a).yx):vec2(0.0,max(a.x*a.x*a.x*a.x*a.x*a.x,a.y*a.y*a.y*a.y*a.y*a.y));
+}
 vec2 imin(vec2 a, vec2 b){
 	return vec2(min(a.x,b.x),min(a.y,b.y));
 }
@@ -51,6 +57,15 @@ vec2 iadd(vec2 a, vec2 b){
 vec2 isub(vec2 a, vec2 b){
 	return a - b.yx;
 }
+vec2 ix(vec3 a, vec3 b){
+	return vec2(min(a.x, b.x), max(a.x, b.x));
+}
+vec2 iy(vec3 a, vec3 b){
+	return vec2(min(a.y, b.y), max(a.y, b.y));
+}
+vec2 iz(vec3 a, vec3 b){
+	return vec2(min(a.z, b.z), max(a.z, b.z));
+}
 vec2 iabs(vec2 a){
   if (a.x >= 0.0)
       return a;
@@ -66,8 +81,20 @@ vec2 ismoothmax(vec2 a, vec2 b, float r){
 	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0)));
 	return iadd(imax(a, b), imul(ipow2(e), 0.25/r));
 }
-vec2 isphere(vec2 x, vec2 y, vec2 z, float r){
-	return ipow2(x) + ipow2(y) + ipow2(z) - r*r;
+vec2 iunion(vec2 a, vec2 b){
+	return vec2(min(a.x, b.x), max(a.y, b.y));
+}
+vec2 iintersect(vec2 a, vec2 b){
+	return vec2(max(a.x, b.x), min(a.y, b.y));
+}
+vec2 isphere(vec2 x, vec2 y, vec2 z, vec3 c, float r){
+	return ipow2(x-c.x) + ipow2(y-c.y) + ipow2(z-c.z) - r*r;
+}
+vec2 isphere2(vec2 x, vec2 y, vec2 z, vec3 c, float r){
+	return ipow4(x-c.x) + ipow4(y-c.y) + ipow4(z-c.z) - r*r;
+}
+vec2 isphere3(vec2 x, vec2 y, vec2 z, vec3 c, float r){
+	return ipow6(x-c.x) + ipow6(y-c.y) + ipow6(z-c.z) - r*r;
 }
 vec2 ibox(vec3 l, vec3 h, vec3 c, vec3 d){
 	vec3 a = c - d;
@@ -92,8 +119,16 @@ bool invalid(vec2 t){
 	return (t.x < 0.) || (t.y > 1.);
 }
 
+vec2 widen(vec2 t){
+	float c = 0.5*width(t);
+	return vec2(t.x - c, t.y + c);
+}
+
 vec2 map(in vec3 a, in vec3 b){
-	return ibox(imin(a, b), imax(a, b), vec3(0.), vec3(1.));
+	vec2 x = ix(a, b); vec2 y = ix(a, b); vec2 z = ix(a, b);
+	vec3 l = imin(a, b); vec3 h = imax(a, b);
+	return isphere(x, y, z, vec3(0.), 1.);
+	return ibox(l, h, vec3(0.), vec3(1.));
 }
 
 vec3 getPos(in vec2 uv, in float z){
@@ -120,8 +155,7 @@ vec2 trace(vec2 uv, vec2 t, float e){
 				return t;
 			continue;
 		}
-		t.x -= width(t)*.2;
-		t.y += width(t)*.2;
+		t = widen(t);
 		if(invalid(t)) break;
 	}
 	return vec2(0.0f, 10.0f);
@@ -133,6 +167,7 @@ void main(){
 	if (pix.x >= size.x || pix.y >= size.y) return;
 	vec2 uv = vec2(pix) / vec2(size.x - 1, size.y - 1);
 	uv = uv * 2. - 1.;
-	float depth = center(trace(uv, vec2(0., 1.), 0.00001f));
-	imageStore(dbuf, pix, vec4(depth));
+	float depth = center(trace(uv, vec2(0., 1.), 0.000001f));
+	if(depth < 1.)
+		imageStore(dbuf, pix, vec4(depth));
 }
