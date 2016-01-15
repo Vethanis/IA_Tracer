@@ -81,12 +81,6 @@ vec2 ismoothmax(vec2 a, vec2 b, float r){
 	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0)));
 	return iadd(imax(a, b), imul(ipow2(e), 0.25/r));
 }
-vec2 iunion(vec2 a, vec2 b){
-	return vec2(min(a.x, b.x), max(a.y, b.y));
-}
-vec2 iintersect(vec2 a, vec2 b){
-	return vec2(max(a.x, b.x), min(a.y, b.y));
-}
 vec2 isphere(vec2 x, vec2 y, vec2 z, vec3 c, float r){
 	return ipow2(x-c.x) + ipow2(y-c.y) + ipow2(z-c.z) - r*r;
 }
@@ -119,16 +113,21 @@ bool invalid(vec2 t){
 	return (t.x < 0.) || (t.y > 1.);
 }
 
-vec2 widen(vec2 t){
-	float c = 0.5*width(t);
-	return vec2(t.x - c, t.y + c);
+vec2 widen(vec2 t, float f){
+	return vec2(t.x - f, t.y + f);
 }
 
 vec2 map(vec3 a, vec3 b){
 	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
-	//vec3 l = imin(a, b); vec3 h = imax(a, b);
-	return isphere(c, d, e, vec3(0.0f), 1.0f);
+	vec3 l = imin(a, b); vec3 h = imax(a, b);
+	//return isphere(c, d, e, vec3(0.0f), 1.0f);
 	//return ibox(l, h, vec3(0.), vec3(1.));
+	return imin(
+		imin(
+			isphere(c, d, e, vec3(1.0f, 0.0f, 0.0f), 1.0f),
+			ibox(l, h, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f))),
+		isphere3(c, d, e, vec3(0.0f, 0.0f, 1.0f), 1.0f)
+		);
 }
 
 vec3 getPos(in vec2 uv, in float z){
@@ -155,7 +154,7 @@ vec2 trace(vec2 uv, vec2 t, float e){
 				return t;
 			continue;
 		}
-		t = widen(t);
+		t = widen(t, width(t)*.2);
 		if(invalid(t)) break;
 	}
 	return vec2(0.0f, 10.0f);

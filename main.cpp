@@ -50,11 +50,11 @@ int main(int argc, char* argv[]){
 	Texture dbuf(WIDTH, HEIGHT, DEPTH);
 	glBindImageTexture(0, dbuf.getID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
 	
-    vec3 light_pos(10.0f, 10.0f, 10.0f);
+    vec3 light_pos(3.0f, 3.0f, 3.0f);
     colorProg.bind();
 	colorProg.setUniform("ambient", vec3(0.001f, 0.0005f, 0.0005f));
 	colorProg.setUniform("light_color", vec3(1.0f));
-	colorProg.setUniform("base_color", vec3(0.7f, 0.35f, 0.175f));
+	colorProg.setUniform("base_color", vec3(0.7f, 0.1f, 0.01f));
 	colorProg.setUniform("light_pos", light_pos);
 	colorProg.setUniform("ddx", ddx);
 	colorProg.setUniform("ddy", ddy);
