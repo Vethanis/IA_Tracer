@@ -124,11 +124,11 @@ vec2 widen(vec2 t){
 	return vec2(t.x - c, t.y + c);
 }
 
-vec2 map(in vec3 a, in vec3 b){
-	vec2 x = ix(a, b); vec2 y = ix(a, b); vec2 z = ix(a, b);
-	vec3 l = imin(a, b); vec3 h = imax(a, b);
-	//return isphere(x, y, z, vec3(0.), 1.);
-	return ibox(l, h, vec3(0.), vec3(1.));
+vec2 map(vec3 a, vec3 b){
+	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
+	//vec3 l = imin(a, b); vec3 h = imax(a, b);
+	return isphere(c, d, e, vec3(0.0f), 1.0f);
+	//return ibox(l, h, vec3(0.), vec3(1.));
 }
 
 vec3 getPos(in vec2 uv, in float z){

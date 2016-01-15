@@ -50,23 +50,15 @@ int main(int argc, char* argv[]){
 	Texture dbuf(WIDTH, HEIGHT, DEPTH);
 	glBindImageTexture(0, dbuf.getID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
 	
-    vec3 light_pos(10.5f, 10.5f, 10.5f);
+    vec3 light_pos(10.0f, 10.0f, 10.0f);
     colorProg.bind();
 	colorProg.setUniform("ambient", vec3(0.001f, 0.0005f, 0.0005f));
 	colorProg.setUniform("light_color", vec3(1.0f));
-	colorProg.setUniform("base_color", vec3(0.3f, 0.2f, 0.7f));
+	colorProg.setUniform("base_color", vec3(0.7f, 0.35f, 0.175f));
 	colorProg.setUniform("light_pos", light_pos);
 	colorProg.setUniform("ddx", ddx);
 	colorProg.setUniform("ddy", ddy);
-	colorProg.setUniformFloat("light_str", 20.0f);
-	
-	depthProg.bind();
-	depthProg.setUniformFloat("near", camera.getNear());
-	depthProg.setUniformFloat("far", camera.getFar());
-	
-	cout << callsizeX << endl;
-	cout << callsizeY << endl;
-
+	colorProg.setUniformFloat("light_str", 10.0f);
 	
 	input.poll();
     unsigned i = 0;
@@ -76,10 +68,8 @@ int main(int argc, char* argv[]){
 		
 		depthProg.bind();
 		depthProg.setUniform("IVP", camera.getIVP());
-		depthProg.setUniform("eye", camera.getEye());
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		depthProg.call(callsizeX, callsizeY, 1);
-		
 		
 		colorProg.bind();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
