@@ -25,7 +25,7 @@ vec3 getPos(vec2 uv, float z){
 	return vec3(t / t.w);
 }
 
-#define NORMALSHADED
+#define DEPTH
 
 void main(){
 	vec2 suv = uv * 0.5 + 0.5;
@@ -50,7 +50,7 @@ void main(){
 	color = pow(color, vec3(1.0f/2.2f));
 #endif
 #ifdef DEPTH
-	vec3 color = vec3(1.0f - texture(dbuf, suv).r);
+	vec3 color = vec3(5.0f - pow(5., texture(dbuf, suv).r));
 #endif
 #ifdef NORMAL
 	vec3 color = N;

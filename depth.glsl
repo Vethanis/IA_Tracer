@@ -154,7 +154,9 @@ vec2 trace(vec2 uv, vec2 t, float e){
 				return t;
 			continue;
 		}
-		t = widen(t, width(t)*.2);
+		float dd = width(t);
+		t.x += dd;
+		t.y += dd*2.0f;
 		if(invalid(t)) break;
 	}
 	return vec2(0.0f, 10.0f);
