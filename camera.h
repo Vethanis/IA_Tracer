@@ -85,5 +85,9 @@ public:
 	inline const glm::mat4& getP(){return P;}
 	inline const glm::mat4& getIVP(){ return IVP;}
 	inline const glm::vec3 getAxis()const{ return normalize(m_at - m_eye);}
+	inline void setPlanes(float near, float far){
+		m_near = near; m_far = far;
+		P = glm::perspective(m_fov, m_whratio, m_near, m_far);
+	}
 };
 #endif

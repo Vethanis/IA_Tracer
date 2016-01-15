@@ -35,8 +35,11 @@ int main(int argc, char* argv[]){
 	const int HEIGHT = atoi(argv[2]);
 	vec2 ddx(2.0f/WIDTH, 0.0f);
 	vec2 ddy(0.0f, 2.0f/HEIGHT);
-	camera.setEye({0.0f, 0.0f, 3.0f});
+	camera.setEye({0.0f, 2.f, -.5f});
 	camera.resize(WIDTH, HEIGHT);
+	camera.setFov(90.0f);
+	camera.setPlanes(0.1f, 400.0f);
+	camera.pitch(-90.0f);
 	camera.update();
 	
 	Window window(WIDTH, HEIGHT, 4, 3, "IA Ray Casting");
@@ -58,6 +61,8 @@ int main(int argc, char* argv[]){
 	colorProg.setUniform("light_pos", light_pos);
 	colorProg.setUniform("ddx", ddx);
 	colorProg.setUniform("ddy", ddy);
+	colorProg.setUniformFloat("near", camera.getNear());
+	colorProg.setUniformFloat("far", camera.getFar());
 	colorProg.setUniformFloat("light_str", 10.0f);
 	
 	input.poll();
@@ -77,8 +82,8 @@ int main(int argc, char* argv[]){
 		colorProg.setUniform("IVP", camera.getIVP());
 		colorProg.setUniform("eye", camera.getEye());
 		dbuf.bind(0);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		colorProg.setUniformInt("dbuf", 0);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		screen.draw();
 		
         window.swap();

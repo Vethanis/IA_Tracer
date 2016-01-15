@@ -15,9 +15,15 @@ uniform vec3 light_pos;
 uniform vec2 ddx;
 uniform vec2 ddy;
 
+uniform float near;
+uniform float far;
 uniform float light_str;
 
 out vec4 out_color;
+
+float linearZ(float z){
+	return (2.*near) / (far + near - z * (far - near));
+}
 
 vec3 getPos(vec2 uv, float z){
 	vec4 t = vec4(uv, z, 1.);
@@ -25,7 +31,7 @@ vec3 getPos(vec2 uv, float z){
 	return vec3(t / t.w);
 }
 
-#define COLOR
+#define DEPTH
 
 void main(){
 	vec2 suv = uv * 0.5 + 0.5;
@@ -54,7 +60,7 @@ void main(){
 	out_color = vec4(N, 1.0);
 #endif
 #ifdef DEPTH
-	out_color = vec4(vec3(5.0f - pow(5., texture(dbuf, suv).r)), 1.0);
+	out_color = vec4(vec3(1.0 - linearZ(texture(dbuf, suv).r)), 1.0);
 #endif
 #ifdef DISCARD
 	out_color = vec4(0.0, 1.0, 0.0, 1.0);

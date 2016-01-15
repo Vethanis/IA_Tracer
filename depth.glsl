@@ -6,6 +6,12 @@ layout(binding = 0, r32f) uniform image2D dbuf;
 
 uniform mat4 IVP;
 
+vec2 iadd(vec2 a, vec2 b){return a + b;}
+vec2 iadd(vec2 a, float b){return a + b;}
+vec2 iadd(float a, vec2 b){return a + b;}
+vec2 isub(vec2 a, vec2 b){return a - b.yx;}
+vec2 isub(vec2 a, float b){return a - b;}
+vec2 isub(float a, vec2 b){return a - b.yx;}
 vec2 imul(vec2 a, vec2 b){
 	vec4 f = vec4(a.xxyy * b.xyxy);	
 	return vec2(
@@ -51,12 +57,6 @@ float imin(vec3 a){
 float imax(vec3 a){
 	return max(max(a.x, a.y), a.z);
 }
-vec2 iadd(vec2 a, vec2 b){
-	return a + b;
-}
-vec2 isub(vec2 a, vec2 b){
-	return a - b.yx;
-}
 vec2 ix(vec3 a, vec3 b){
 	return vec2(min(a.x, b.x), max(a.x, b.x));
 }
@@ -73,6 +73,12 @@ vec2 iabs(vec2 a){
       return vec2(-a.y, -a.x);
   return vec2(0, max(-a.x, a.y));
 }
+vec2 iunion(vec2 a, vec2 b){
+	return vec2(min(a.x, b.x), max(a.y, b.y));
+}
+vec2 iintersect(vec2 a, vec2 b){
+	return vec2(max(a.x, b.x), min(a.y, b.y));
+}
 vec2 ismoothmin(vec2 a, vec2 b, float r){
 	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0)));
 	return isub(imin(a, b), imul(ipow2(e), 0.25/r));
@@ -80,6 +86,29 @@ vec2 ismoothmin(vec2 a, vec2 b, float r){
 vec2 ismoothmax(vec2 a, vec2 b, float r){
 	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0)));
 	return iadd(imax(a, b), imul(ipow2(e), 0.25/r));
+}
+vec4 imod2(vec2 a, float b){
+	if ((a.y - a.x) >= b)
+       		return vec4(0.0, b, 0.0, b);
+	else {
+            a = mod(a,b);
+            if (a.y < a.x)
+                return vec4(a.x,b,0.0,a.y);
+                return vec4(a,a);
+	}
+}
+vec2 isqrt(vec2 a){
+	return vec2(sqrt(a.x), sqrt(a.y));
+}
+vec2 ilength(vec2 a, vec2 b){
+	return isqrt(ipow2(a) + ipow2(b));
+}
+vec2 itri(vec2 x, float p){
+	vec4 m = imod2(x + (p*0.5), p) - 0.5*p;
+	return iunion(iabs(m.xy), iabs(m.zw));
+}
+vec2 itorus(vec2 x, vec2 y, vec2 z, vec2 t){
+	return isub(ilength(isub(ilength(x, y), t.x), z), t.y);
 }
 vec2 isphere(vec2 x, vec2 y, vec2 z, vec3 c, float r){
 	return ipow2(x-c.x) + ipow2(y-c.y) + ipow2(z-c.z) - r*r;
@@ -89,6 +118,15 @@ vec2 isphere2(vec2 x, vec2 y, vec2 z, vec3 c, float r){
 }
 vec2 isphere3(vec2 x, vec2 y, vec2 z, vec3 c, float r){
 	return ipow6(x-c.x) + ipow6(y-c.y) + ipow6(z-c.z) - r*r;
+}
+vec2 icube(vec2 x, vec2 y, vec2 z, float s){
+	return isub(
+		imax(
+			imax(
+				iabs(x), 
+				iabs(y)),
+			iabs(z)),
+		s);
 }
 vec2 ibox(vec3 l, vec3 h, vec3 c, vec3 d){
 	vec3 a = c - d;
@@ -117,17 +155,30 @@ vec2 widen(vec2 t, float f){
 	return vec2(t.x - f, t.y + f);
 }
 
+vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
+	vec2 d = itri(a, 40.0);
+	vec2 e = itri(b, 40.0);
+	vec2 f = itri(c, 40.0);
+	return imin(
+		itorus(d, e, f, vec2(1.0, 0.2)),
+		icube(d, e, f, 0.5)
+		);
+}
+
 vec2 map(vec3 a, vec3 b){
 	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
-	vec3 l = imin(a, b); vec3 h = imax(a, b);
+	return paniq_scene(c, d, e);
+	//vec3 l = imin(a, b); vec3 h = imax(a, b);
 	//return isphere(c, d, e, vec3(0.0f), 1.0f);
 	//return ibox(l, h, vec3(0.), vec3(1.));
-	return imin(
+	/*return imin(
 		imin(
 			isphere(c, d, e, vec3(1.0f, 0.0f, 0.0f), 1.0f),
 			ibox(l, h, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f))),
 		isphere3(c, d, e, vec3(0.0f, 0.0f, 1.0f), 1.0f)
 		);
+	*/
+	
 }
 
 vec3 getPos(in vec2 uv, in float z){
