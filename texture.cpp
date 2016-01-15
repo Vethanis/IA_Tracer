@@ -65,3 +65,8 @@ void Texture::bind(unsigned channel){
 	glBindTexture(GL_TEXTURE_2D, tex_id);MYGLERRORMACRO
 }
 
+
+void Texture::setCSBinding(unsigned binding){
+	glBindImageTexture(0, tex_id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+}
+

@@ -156,9 +156,9 @@ vec2 widen(vec2 t, float f){
 }
 
 vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
-	vec2 d = itri(a, 40.0);
-	vec2 e = itri(b, 40.0);
-	vec2 f = itri(c, 40.0);
+	vec2 d = itri(a, 10.0);
+	vec2 e = itri(b, 10.0);
+	vec2 f = itri(c, 10.0);
 	return imin(
 		itorus(d, e, f, vec2(1.0, 0.2)),
 		icube(d, e, f, 0.5)
@@ -211,6 +211,15 @@ vec2 trace(vec2 uv, vec2 t, float e){
 		if(invalid(t)) break;
 	}
 	return vec2(0.0f, 10.0f);
+}
+
+vec2 tracesub(vec2 u, vec2 v, vec2 t, float e){
+	
+	return vec2(0.);
+}
+
+vec2 subdivide(vec2 u, vec2 v, vec2 t, float e){
+	return vec2(0.);
 }
 
 void main(){

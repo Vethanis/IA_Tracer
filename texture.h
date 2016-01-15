@@ -24,6 +24,7 @@ public:
 	Texture(unsigned w, unsigned h, TEXTURETYPE t);
 	~Texture();
 	void bind(unsigned channel);
+	void setCSBinding(unsigned binding);
 	unsigned getID(){return tex_id;};
 	unsigned getWidth(){return width;};
 	unsigned getHeight(){return height;};

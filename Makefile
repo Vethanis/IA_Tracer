@@ -27,7 +27,7 @@ OBJ_FILES = $(CPP_FILES:.cpp=.o)
  
 all: $(EXE)
  
-debug:	CXXFLAGS += -DDEBUG -g -Og
+debug:	CXXFLAGS += -DDEBUG -g 
 debug:	$(EXE)
 
 release: CXXFLAGS += -O3

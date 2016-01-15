@@ -1,8 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#include "camera.h"
-
+class Camera;
 struct GLFWwindow;
 
 class Input{

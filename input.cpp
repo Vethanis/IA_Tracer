@@ -1,6 +1,7 @@
 #include "input.h"
 
 #include "myglheaders.h"
+#include "camera.h"
 #include "glm/glm.hpp"
 
 bool Input::m_rightMouseDown = false;

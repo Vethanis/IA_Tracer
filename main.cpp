@@ -8,6 +8,8 @@
 #include "glscreen.h"
 #include "texture.h"
 #include "compute_shader.h"
+#include "SSBO.h"
+#include "timer.h"
 
 using namespace std;
 using namespace glm;
@@ -51,7 +53,7 @@ int main(int argc, char* argv[]){
 	GLProgram colorProg("fullscreen.glsl", "color.glsl");
 	GLScreen screen;
 	Texture dbuf(WIDTH, HEIGHT, FLOAT);
-	glBindImageTexture(0, dbuf.getID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+	dbuf.setCSBinding(0);
 	
     vec3 light_pos(3.0f, 3.0f, 3.0f);
     colorProg.bind();
@@ -65,6 +67,7 @@ int main(int argc, char* argv[]){
 	colorProg.setUniformFloat("far", camera.getFar());
 	colorProg.setUniformFloat("light_str", 10.0f);
 	
+	Timer timer;
 	input.poll();
     unsigned i = 0;
     double t = glfwGetTime();
@@ -74,7 +77,10 @@ int main(int argc, char* argv[]){
 		depthProg.bind();
 		depthProg.setUniform("IVP", camera.getIVP());
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		
+		if(t > 2.9)timer.begin();
 		depthProg.call(callsizeX, callsizeY, 1);
+		if(t > 2.9)timer.endPrint();
 		
 		colorProg.bind();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
@@ -89,6 +95,7 @@ int main(int argc, char* argv[]){
         window.swap();
         clearProg.bind();
         clearProg.call(callsizeX, callsizeY, 1);
+        
     }
     return 0;
 }
