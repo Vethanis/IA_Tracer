@@ -5,6 +5,8 @@ layout(local_size_x = 8, local_size_y = 8) in;
 layout(binding = 0, r32f) uniform image2D dbuf;
 
 uniform mat4 IVP;
+uniform int depth;
+uniform float epsilon;
 
 vec2 iadd(vec2 a, vec2 b){return a + b;}
 vec2 iadd(vec2 a, float b){return a + b;}
@@ -154,6 +156,12 @@ bool invalid(vec2 t){
 vec2 widen(vec2 t, float f){
 	return vec2(t.x - f, t.y + f);
 }
+vec2 inear(vec2 a){
+	return vec2(a.x, 0.5f*(a.x+a.y));
+}
+vec2 ifar(vec2 a){
+	return vec2(0.5f*(a.x+a.y), a.y);
+}
 
 vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
 	vec2 d = itri(a, 40.0);
@@ -213,13 +221,103 @@ vec2 trace(vec2 uv, vec2 t, float e){
 	return vec2(0.0f, 10.0f);
 }
 
-vec2 tracesub(vec2 u, vec2 v, vec2 t, float e){
-	
-	return vec2(0.);
+mat4 splitUV(vec4 uv){
+	float cu = 0.5f*(uv.x + uv.y);
+	float cv = 0.5f*(uv.z + uv.w);
+	return mat4(
+		vec4(uv.x, cu, uv.z, cv),
+		vec4(uv.x, cu, cv, uv.w),
+		vec4(cu, uv.y, uv.z, cv),
+		vec4(cu, uv.y, cv, uv.w));
 }
 
-vec2 subdivide(vec2 u, vec2 v, vec2 t, float e){
-	return vec2(0.);
+int uvToIndex(vec2 uv){
+	int size = 1;
+	size = size << depth;
+	int r = int((0.5f * uv.x + 0.5f) * size);
+	int c = int((0.5f * uv.y + 0.5f) * size);
+	return r + size * c;
+}
+
+void paint(vec4 uv, float t){
+	mat4 childuvs = splitUV(uv);
+	ivec4 ids;
+	{
+		vec2 a = vec2(childuvs[0].x, childuvs[0].z);
+		ids.x = uvToIndex(a);
+		a = vec2(childuvs[1].x, childuvs[1].z);
+		ids.y = uvToIndex(a);
+		a = vec2(childuvs[2].x, childuvs[2].z);
+		ids.z = uvToIndex(a);
+		a = vec2(childuvs[3].x, childuvs[3].z);
+		ids.w = uvToIndex(a);
+	}
+	switch(depth){
+		case 0:
+		break;
+		case 1:
+		break;
+		case 2:
+		break;
+		case 3:
+		break;
+		case 4:
+		break;
+		case 5:
+		break;
+		case 6:
+		break;
+		case 7:
+		break;
+		case 8:
+		break;
+		case 9:
+		break;
+		case 10:
+		break;
+		default:
+		break;
+	}
+}
+
+vec2 tracesub(vec4 uv, vec2 t){
+	vec2 uvlo = vec2(uv.x, uv.z);
+	vec2 uvhi = vec2(uv.y, uv.w);
+	vec3 p0 = getPos(uvlo, t.x);
+	vec3 p1 = getPos(uvhi, t.y);
+	vec2 F = map(p0, p1);
+	if(!contains(F, 0.0f)) return vec2(-1.0f);
+	const int sz = 60;
+	vec2 stack[sz];
+	int end = 0;
+	stack[end] = ifar(t);	// push back interval
+	end++;
+	stack[end] = inear(t);	// push near interval
+	while(end >= 0 && end < sz){
+		vec2 cur = stack[end];	// pop
+		
+		p0 = getPos(uvlo, cur.x);
+		p1 = getPos(uvhi, cur.y);
+		F = map(p0, p1);
+		if(contains(F, 0.0f)){
+			if(width(cur) < epsilon)
+				return cur;
+			end++;	//push back interval
+			if(end == sz) return vec2(-1.0f);
+			stack[end] = ifar(cur);
+			end++;	//push front interval
+			if(end == sz) return vec2(-1.0f);
+			stack[end] = inear(cur);
+			continue;
+		}
+		end--;
+	}
+	return vec2(-1.0f);
+}
+
+void subdivide(vec4 uv, vec2 t){
+	vec2 t0 = tracesub(uv, t);
+	if(t0.x > 0.) paint(uv, center(t0));
 }
 
 void main(){
@@ -228,7 +326,7 @@ void main(){
 	if (pix.x >= size.x || pix.y >= size.y) return;
 	vec2 uv = vec2(pix) / vec2(size.x - 1, size.y - 1);
 	uv = uv * 2. - 1.;
-	float depth = center(trace(uv, vec2(0., 1.), 0.000001f));
-	if(depth < 1.)
-		imageStore(dbuf, pix, vec4(depth));
+	float t = center(trace(uv, vec2(0., 1.), 0.000001f));
+	if(t < 1.)
+		imageStore(dbuf, pix, vec4(t));
 }

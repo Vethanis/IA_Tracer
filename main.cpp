@@ -15,7 +15,7 @@ using namespace std;
 using namespace glm;
 
 struct TPyramid{
-	// validity of a t is given by (t[id].x < 0.0f)
+	// validity of a uv cell is given by (td[idx].x >= 0.0f)
 	// all valid ranges of t are with in [0, 1]
 	// should have log2(max(width, height))-1 levels.
 	// final level is the depth texture
@@ -32,15 +32,15 @@ struct TPyramid{
 	void clear(){
 		t0 = vec2(0.0f, 1.0f);
 		vec2 c(-1.0f, 1.0f);
-		for(auto& i : t1) i = c;
-		for(auto& i : t2) i = c;
-		for(auto& i : t3) i = c;
-		for(auto& i : t4) i = c;
-		for(auto& i : t5) i = c;
-		for(auto& i : t6) i = c;
-		for(auto& i : t7) i = c;
-		for(auto& i : t8) i = c;
-		for(auto& i : t9) i = c;
+		for(int i = 0; i < 4*4*4*4*4*4*4*4*4; i++){ t9[i] = c;}
+		for(int i = 0; i < 4*4*4*4*4*4*4*4; i++){ t8[i] = c;}
+		for(int i = 0; i < 4*4*4*4*4*4*4; i++){ t7[i] = c;}
+		for(int i = 0; i < 4*4*4*4*4*4; i++){ t6[i] = c;}
+		for(int i = 0; i < 4*4*4*4*4; i++){ t5[i] = c;}
+		for(int i = 0; i < 4*4*4*4; i++){ t4[i] = c;}
+		for(int i = 0; i < 4*4*4; i++){ t3[i] = c;}
+		for(int i = 0; i < 4*4; i++){ t2[i] = c;}
+		for(int i = 0; i < 4; i++){ t1[i] = c;}
 	}
 	int uvToIndex(vec2 uv, int depth){
 		unsigned size = 1;
@@ -60,6 +60,25 @@ struct TPyramid{
 		float v = -1.0f + r * dy;
 		return vec4(u, u+dx, v, v+dy);
 	}
+	mat4 splitUV(vec4 uv){
+		float cu = 0.5f*(uv.x + uv.y);
+		float cv = 0.5f*(uv.z + uv.w);
+		return mat4(
+			vec4(uv.x, cu, uv.z, cv),
+			vec4(uv.x, cu, cv, uv.w),
+			vec4(cu, uv.y, uv.z, cv),
+			vec4(cu, uv.y, cv, uv.w));
+	}
+	/*	pseudocode example only
+	void writeChildren(vec4 uv, float t, int cur_depth){
+		mat4 childuvs = splitUV(uv);
+		int e = cur_depth+1;
+		for(int i = 0; i < 4; i++){
+			int j = uvToIndex(childuvs[i].xy, e);
+			te[j] = t;
+		}
+	}
+	*/
 };
 
 double frameBegin(unsigned& i, double& t){
