@@ -8,7 +8,6 @@ uniform mat4 IVP;
 
 uniform vec3 eye;
 uniform vec3 ambient;
-uniform vec3 base_color;
 uniform vec3 light_color;
 uniform vec3 light_pos;
 
@@ -43,6 +42,10 @@ void main(){
 	if(z >= 1.) discard;
 #endif
 #ifdef COLOR
+	float mat = texture(dbuf, suv).g;
+	vec3 base_color;
+	if(mat == 0.0f) base_color = vec3(1.0f, 0.0f, 0.0f);
+	if(mat == 1.0f) base_color = vec3(0.0f, 1.0f, 0.0f);
 	vec3 pos   = getPos(uv.xy, z);
 	vec3 xtan  = getPos(uv.xy+ddx, texture(dbuf, suv+.5*ddx).r) - pos;
 	vec3 ytan  = getPos(uv.xy+ddy, texture(dbuf, suv+.5*ddy).r) - pos;

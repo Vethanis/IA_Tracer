@@ -67,6 +67,6 @@ void Texture::bind(unsigned channel){
 
 
 void Texture::setCSBinding(unsigned binding){
-	glBindImageTexture(0, tex_id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+	glBindImageTexture(0, tex_id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RG32F);
 }
 

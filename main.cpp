@@ -64,7 +64,7 @@ int main(int argc, char* argv[]){
 	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
 	GLProgram colorProg("fullscreen.glsl", "color.glsl");
 	GLScreen screen;
-	Texture dbuf(WIDTH, HEIGHT, FLOAT);
+	Texture dbuf(WIDTH, HEIGHT, FLOAT2);
 	dbuf.setCSBinding(0);
 	params[0] = CSGParam(vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f);
 	params[1] = CSGParam(vec3(0.0f), vec3(0.5f, 0.5f, 0.5f), 1.0f, 1.0f);
