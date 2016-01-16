@@ -14,79 +14,26 @@
 using namespace std;
 using namespace glm;
 
-struct TPyramid{
-	// validity of a uv cell is given by (td[idx].x >= 0.0f)
-	// all valid ranges of t are with in [0, 1]
-	// should have log2(max(width, height))-1 levels.
-	// final level is the depth texture
-	vec2 t9[4*4*4*4*4*4*4*4*4];
-	vec2 t8[4*4*4*4*4*4*4*4];
-	vec2 t7[4*4*4*4*4*4*4];
-	vec2 t6[4*4*4*4*4*4];
-	vec2 t5[4*4*4*4*4];
-	vec2 t4[4*4*4*4];
-	vec2 t3[4*4*4];
-	vec2 t2[4*4];
-	vec2 t1[4];
-	vec2 t0;
-	void clear(){
-		t0 = vec2(0.0f, 1.0f);
-		vec2 c(-1.0f, 1.0f);
-		for(int i = 0; i < 4*4*4*4*4*4*4*4*4; i++){ t9[i] = c;}
-		for(int i = 0; i < 4*4*4*4*4*4*4*4; i++){ t8[i] = c;}
-		for(int i = 0; i < 4*4*4*4*4*4*4; i++){ t7[i] = c;}
-		for(int i = 0; i < 4*4*4*4*4*4; i++){ t6[i] = c;}
-		for(int i = 0; i < 4*4*4*4*4; i++){ t5[i] = c;}
-		for(int i = 0; i < 4*4*4*4; i++){ t4[i] = c;}
-		for(int i = 0; i < 4*4*4; i++){ t3[i] = c;}
-		for(int i = 0; i < 4*4; i++){ t2[i] = c;}
-		for(int i = 0; i < 4; i++){ t1[i] = c;}
+struct CSGParam{
+	vec4 center;
+	vec4 dim;
+	CSGParam() : center(vec4(0.0f, 0.0f, 0.0f, -1.0f)), dim(vec4(0.0f, 0.0f, 0.0f, -1.0f)){};
+	CSGParam(const vec3& c, const vec3& d, float type, float mat){
+		center = vec4(c, type); dim = vec4(d, mat);
 	}
-	int uvToIndex(vec2 uv, int depth){
-		unsigned size = 1;
-		size = size << depth;
-		int r = (0.5f * uv.x + 0.5f) * size;
-		int c = (0.5f * uv.y + 0.5f) * size;
-		return r + size * c;
-	}
-	vec4 IndexToUV(int i, int depth){
-		unsigned size = 1;
-		size = size << depth;
-		int r = i % size;
-		int c = i / size;
-		float dx = 2.0f / size;
-		float dy = 2.0f / size;
-		float u = -1.0f + c * dx;
-		float v = -1.0f + r * dy;
-		return vec4(u, u+dx, v, v+dy);
-	}
-	mat4 splitUV(vec4 uv){
-		float cu = 0.5f*(uv.x + uv.y);
-		float cv = 0.5f*(uv.z + uv.w);
-		return mat4(
-			vec4(uv.x, cu, uv.z, cv),
-			vec4(uv.x, cu, cv, uv.w),
-			vec4(cu, uv.y, uv.z, cv),
-			vec4(cu, uv.y, cv, uv.w));
-	}
-	/*	pseudocode example only
-	void writeChildren(vec4 uv, float t, int cur_depth){
-		mat4 childuvs = splitUV(uv);
-		int e = cur_depth+1;
-		for(int i = 0; i < 4; i++){
-			int j = uvToIndex(childuvs[i].xy, e);
-			te[j] = t;
-		}
-	}
-	*/
+	CSGParam(const CSGParam& other)
+		: center(other.center), dim(other.dim){};
 };
+
+CSGParam params[2];
 
 double frameBegin(unsigned& i, double& t){
     double dt = glfwGetTime() - t;
     t += dt;
     i++;
     if(t >= 3.0){
-        printf("ms: %.6f, FPS: %.3f\n", t / i, i / t);
+    	double ms = (t / i) * 1000.0;
+        printf("ms: %.6f, FPS: %.3f\n", ms, i / t);
         i = 0;
         t = 0.0;
         glfwSetTime(0.0);
@@ -105,12 +52,12 @@ int main(int argc, char* argv[]){
 	vec2 ddx(2.0f/WIDTH, 0.0f);
 	vec2 ddy(0.0f, 2.0f/HEIGHT);
 	camera.setEye({0.0f, 0.f, 2.f});
+	camera.setPlanes(0.1f, 100.0f);
 	camera.resize(WIDTH, HEIGHT);
 	camera.update();
 	
 	Window window(WIDTH, HEIGHT, 4, 3, "IA Ray Casting");
 	Input input(window.getWindow());
-	//ComputeShader depthProg("depth.glsl");
 	ComputeShader rayProg("rmarch.glsl");
 	ComputeShader clearProg("clear.glsl");
 	unsigned callsizeX = WIDTH / 8 + ((WIDTH % 8) ? 1 : 0);
@@ -119,6 +66,9 @@ int main(int argc, char* argv[]){
 	GLScreen screen;
 	Texture dbuf(WIDTH, HEIGHT, FLOAT);
 	dbuf.setCSBinding(0);
+	params[0] = CSGParam(vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f);
+	params[1] = CSGParam(vec3(0.0f), vec3(0.5f, 0.5f, 0.5f), 1.0f, 1.0f);
+	SSBO paramssbo(&params[0], sizeof(params), 1);
 	
     vec3 light_pos(3.0f, 3.0f, 3.0f);
     colorProg.bind();
@@ -162,7 +112,6 @@ int main(int argc, char* argv[]){
         window.swap();
         clearProg.bind();
         clearProg.call(callsizeX, callsizeY, 1);
-        
     }
     return 0;
 }

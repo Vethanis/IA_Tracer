@@ -21,8 +21,11 @@ uniform float light_str;
 
 out vec4 out_color;
 
-float linearZ(float z){
-	return (2.*near) / (far + near - z * (far - near));
+float toExp(float z){
+	return (1./z - 1./near) / (1./far - 1./near);
+}
+float toLin(float f){
+	return 1.0 / (f * (1./far - 1./near) + (1./near));
 }
 
 vec3 getPos(vec2 uv, float z){
