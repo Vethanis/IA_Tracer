@@ -31,7 +31,7 @@ vec3 getPos(vec2 uv, float z){
 	return vec3(t / t.w);
 }
 
-#define NORMAL
+#define COLOR
 
 void main(){
 	vec2 suv = uv * 0.5 + 0.5;

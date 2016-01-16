@@ -104,16 +104,14 @@ int main(int argc, char* argv[]){
 	const int HEIGHT = atoi(argv[2]);
 	vec2 ddx(2.0f/WIDTH, 0.0f);
 	vec2 ddy(0.0f, 2.0f/HEIGHT);
-	camera.setEye({0.0f, 2.f, -.5f});
+	camera.setEye({0.0f, 0.f, 2.f});
 	camera.resize(WIDTH, HEIGHT);
-	camera.setFov(90.0f);
-	camera.setPlanes(0.1f, 400.0f);
-	camera.pitch(-90.0f);
 	camera.update();
 	
 	Window window(WIDTH, HEIGHT, 4, 3, "IA Ray Casting");
 	Input input(window.getWindow());
-	ComputeShader depthProg("depth.glsl");
+	//ComputeShader depthProg("depth.glsl");
+	ComputeShader rayProg("rmarch.glsl");
 	ComputeShader clearProg("clear.glsl");
 	unsigned callsizeX = WIDTH / 8 + ((WIDTH % 8) ? 1 : 0);
 	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
@@ -134,6 +132,10 @@ int main(int argc, char* argv[]){
 	colorProg.setUniformFloat("far", camera.getFar());
 	colorProg.setUniformFloat("light_str", 10.0f);
 	
+	rayProg.bind();
+	rayProg.setUniformFloat("near", camera.getNear());
+	rayProg.setUniformFloat("far", camera.getFar());
+	
 	Timer timer;
 	input.poll();
     unsigned i = 0;
@@ -141,13 +143,11 @@ int main(int argc, char* argv[]){
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
 		
-		depthProg.bind();
-		depthProg.setUniform("IVP", camera.getIVP());
+		rayProg.bind();
+		rayProg.setUniform("IVP", camera.getIVP());
+		rayProg.setUniform("eye", camera.getEye());
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		
-		if(t > 2.9)timer.begin();
-		depthProg.call(callsizeX, callsizeY, 1);
-		if(t > 2.9)timer.endPrint();
+		rayProg.call(callsizeX, callsizeY, 1);
 		
 		colorProg.bind();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))

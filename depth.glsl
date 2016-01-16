@@ -175,10 +175,11 @@ vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
 
 vec2 map(vec3 a, vec3 b){
 	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
-	return paniq_scene(c, d, e);
+	//return paniq_scene(c, d, e);
 	//vec3 l = imin(a, b); vec3 h = imax(a, b);
-	//return isphere(c, d, e, vec3(0.0f), 1.0f);
+	return isphere(c, d, e, vec3(0.0f), 1.0f);
 	//return ibox(l, h, vec3(0.), vec3(1.));
+	//return itorus(c, d, e, vec2(1.0, 0.2));
 	/*return imin(
 		imin(
 			isphere(c, d, e, vec3(1.0f, 0.0f, 0.0f), 1.0f),
@@ -197,125 +198,32 @@ vec3 getPos(in vec2 uv, in float z){
 
 vec2 trace(vec2 uv, vec2 t, float e){
 	for(int i = 0; i < 60; i++){
-		vec2 t0 = vec2(t.x, center(t));
-		vec2 F = map(getPos(uv, t0.x), getPos(uv, t0.y));
+		vec2 cur = inear(t);
+		vec3 p0 = getPos(uv, cur.x);
+		vec3 p1 = getPos(uv, cur.y);
+		vec2 F = map(p0, p1);
 		if(contains(F, 0.0f)){
-			t = t0;
-			if(width(t) < e)
-				return t;
+			if(width(cur) < e)
+				return cur;
+			t = cur;
 			continue;
-		}
-		t0 = vec2(t0.y, t.y);
-		F = map(getPos(uv, t0.x), getPos(uv, t0.y));
-		if(contains(F, 0.0f)){
-			t = t0;
-			if(width(t) < e)
-				return t;
-			continue;
-		}
-		float dd = width(t);
-		t.x += dd;
-		t.y += dd*2.0f;
-		if(invalid(t)) break;
-	}
-	return vec2(0.0f, 10.0f);
-}
-
-mat4 splitUV(vec4 uv){
-	float cu = 0.5f*(uv.x + uv.y);
-	float cv = 0.5f*(uv.z + uv.w);
-	return mat4(
-		vec4(uv.x, cu, uv.z, cv),
-		vec4(uv.x, cu, cv, uv.w),
-		vec4(cu, uv.y, uv.z, cv),
-		vec4(cu, uv.y, cv, uv.w));
-}
-
-int uvToIndex(vec2 uv){
-	int size = 1;
-	size = size << depth;
-	int r = int((0.5f * uv.x + 0.5f) * size);
-	int c = int((0.5f * uv.y + 0.5f) * size);
-	return r + size * c;
-}
-
-void paint(vec4 uv, float t){
-	mat4 childuvs = splitUV(uv);
-	ivec4 ids;
-	{
-		vec2 a = vec2(childuvs[0].x, childuvs[0].z);
-		ids.x = uvToIndex(a);
-		a = vec2(childuvs[1].x, childuvs[1].z);
-		ids.y = uvToIndex(a);
-		a = vec2(childuvs[2].x, childuvs[2].z);
-		ids.z = uvToIndex(a);
-		a = vec2(childuvs[3].x, childuvs[3].z);
-		ids.w = uvToIndex(a);
-	}
-	switch(depth){
-		case 0:
-		break;
-		case 1:
-		break;
-		case 2:
-		break;
-		case 3:
-		break;
-		case 4:
-		break;
-		case 5:
-		break;
-		case 6:
-		break;
-		case 7:
-		break;
-		case 8:
-		break;
-		case 9:
-		break;
-		case 10:
-		break;
-		default:
-		break;
-	}
-}
-
-vec2 tracesub(vec4 uv, vec2 t){
-	vec2 uvlo = vec2(uv.x, uv.z);
-	vec2 uvhi = vec2(uv.y, uv.w);
-	vec3 p0 = getPos(uvlo, t.x);
-	vec3 p1 = getPos(uvhi, t.y);
-	vec2 F = map(p0, p1);
-	if(!contains(F, 0.0f)) return vec2(-1.0f);
-	const int sz = 60;
-	vec2 stack[sz];
-	int end = 0;
-	stack[end] = ifar(t);	// push back interval
-	end++;
-	stack[end] = inear(t);	// push near interval
-	while(end >= 0 && end < sz - 2){
-		vec2 cur = stack[end];	// pop
-		
-		p0 = getPos(uvlo, cur.x);
-		p1 = getPos(uvhi, cur.y);
+		}		
+		cur = ifar(t);
+		p0 = getPos(uv, cur.x);
+		p1 = getPos(uv, cur.y);
 		F = map(p0, p1);
 		if(contains(F, 0.0f)){
-			if(width(cur) < epsilon)
+			if(width(cur) < e)
 				return cur;
-			end++;	//push back interval
-			stack[end] = ifar(cur);
-			end++;	//push front interval
-			stack[end] = inear(cur);
+			t = cur;
 			continue;
 		}
-		end--;
+		float dd = width(cur);
+		cur.x += dd;
+		cur.y += 2.0f*dd;
+		if(cur.y > 1.0f) break;
 	}
-	return vec2(-1.0f);
-}
-
-void subdivide(vec4 uv, vec2 t){
-	vec2 t0 = tracesub(uv, t);
-	if(t0.x > 0.) paint(uv, center(t0));
+	return vec2(200.0f);
 }
 
 void main(){
