@@ -1,6 +1,8 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
+#include <string>
+
 enum TEXTURETYPE{
 	COLOR,
 	UBYTE,
@@ -17,14 +19,16 @@ enum TEXTURETYPE{
 	FLOAT3
 };
 
+class GLProgram;
+
 class Texture{
 	unsigned tex_id, width, height;
 	TEXTURETYPE type;
 public:
-	Texture(unsigned w, unsigned h, TEXTURETYPE t);
+	Texture(int w, int h, TEXTURETYPE t);
 	~Texture();
-	void bind(unsigned channel);
-	void setCSBinding(unsigned binding);
+	void bind(int channel, const std::string& uniform_name, GLProgram& prog);
+	void setCSBinding(int binding);
 	unsigned getID(){return tex_id;};
 	unsigned getWidth(){return width;};
 	unsigned getHeight(){return height;};

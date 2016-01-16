@@ -1,9 +1,10 @@
 #include "myglheaders.h"
 #include "texture.h"
 #include "debugmacro.h"
+#include "glprogram.h"
 
 
-Texture::Texture(unsigned w, unsigned h, TEXTURETYPE t){
+Texture::Texture(int w, int h, TEXTURETYPE t){
 	width = w; height = h; type = t;
 	
 	glGenTextures(1, &tex_id);	MYGLERRORMACRO
@@ -60,13 +61,44 @@ Texture::~Texture(){
 	glDeleteTextures(1, &tex_id);	MYGLERRORMACRO
 }
 
-void Texture::bind(unsigned channel){
+void Texture::bind(int channel, const std::string& uname, GLProgram& prog){
 	glActiveTexture(GL_TEXTURE0 + channel);MYGLERRORMACRO
 	glBindTexture(GL_TEXTURE_2D, tex_id);MYGLERRORMACRO
+	prog.setUniformInt(uname, channel);
 }
 
 
-void Texture::setCSBinding(unsigned binding){
-	glBindImageTexture(0, tex_id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RG32F);
+void Texture::setCSBinding(int binding){
+	/*unsigned val;
+		switch(type){
+		case COLOR:{val=GL_RGB8UI;	}
+			break;
+		case UBYTE:{val=GL_R8UI;	}
+			break;
+		case UBYTE2:{val=GL_RG8UI;	}
+			break;
+		case UBYTE3:{val=GL_RGB8UI;	}
+			break;
+		case SBYTE:{val=GL_R8I;		}
+			break;
+		case SBYTE2:{val=GL_RG8I;	}
+			break;
+		case SBYTE3:{val=GL_RGB8I;	}
+			break;
+		case SINT:{val=GL_R32I;		}
+			break;
+		case SINT2:{val=GL_RG32I;	}
+			break;
+		case SINT3:{val=GL_RGB32I;	}
+			break;
+		case FLOAT:{val=GL_R32F;	}
+			break;
+		case FLOAT2:{val=GL_RG32F;	}
+			break;
+		case FLOAT3:{val=GL_RGB32F;	}
+			break;
+		}
+	}*/
+	glBindImageTexture(0, tex_id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RG32F);MYGLERRORMACRO
 }
 

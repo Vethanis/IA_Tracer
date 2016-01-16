@@ -9,10 +9,21 @@
 #include "texture.h"
 #include "compute_shader.h"
 #include "SSBO.h"
-#include "timer.h"
+#include "UBO.h"
+
+#include <random>
+#include "time.h"
 
 using namespace std;
 using namespace glm;
+
+#define NUM_PRIMS 200
+
+struct CommonParams{
+	mat4 IVP;
+	vec4 eye;
+	vec4 nfp;	// near, far, num_prims
+};
 
 struct CSGParam{
 	vec4 center;
@@ -25,7 +36,6 @@ struct CSGParam{
 		: center(other.center), dim(other.dim){};
 };
 
-CSGParam params[2];
 
 double frameBegin(unsigned& i, double& t){
     double dt = glfwGetTime() - t;
@@ -46,6 +56,8 @@ int main(int argc, char* argv[]){
 		cout << argv[0] << " <screen width> <screen height>" << endl;
 		return 1;
 	}
+	
+	srand(time(NULL));
 	Camera camera;
 	const int WIDTH = atoi(argv[1]);
 	const int HEIGHT = atoi(argv[2]);
@@ -66,9 +78,21 @@ int main(int argc, char* argv[]){
 	GLScreen screen;
 	Texture dbuf(WIDTH, HEIGHT, FLOAT2);
 	dbuf.setCSBinding(0);
-	params[0] = CSGParam(vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f);
-	params[1] = CSGParam(vec3(0.0f), vec3(0.5f, 0.5f, 0.5f), 1.0f, 1.0f);
+	CSGParam params[NUM_PRIMS];
+	for(int i = 0; i < NUM_PRIMS; i++){
+		float a[6];
+		for(int j = 0; j < 3;j++)	// [-50, 50]
+			a[j] = rand()%100 - 50.0f;
+		for(int j = 3; j < 6; j++)	// [0,100]
+			a[j] = rand()%1000 / 100.0f;
+		float t = (float)(rand()%2);
+		float m = (float)(rand()%2);
+		params[i] = CSGParam({a[0], a[1], a[2]}, {a[3], a[4], a[5]}, t, m);
+	}
 	SSBO paramssbo(&params[0], sizeof(params), 1);
+	CommonParams com_p;
+	com_p.nfp = vec4(camera.getNear(), camera.getFar(), NUM_PRIMS*1.0f, 0.0f);
+	UBO camUBO(&com_p, sizeof(com_p), 2);
 	
     vec3 light_pos(3.0f, 3.0f, 3.0f);
     colorProg.bind();
@@ -78,34 +102,25 @@ int main(int argc, char* argv[]){
 	colorProg.setUniform("light_pos", light_pos);
 	colorProg.setUniform("ddx", ddx);
 	colorProg.setUniform("ddy", ddy);
-	colorProg.setUniformFloat("near", camera.getNear());
-	colorProg.setUniformFloat("far", camera.getFar());
 	colorProg.setUniformFloat("light_str", 10.0f);
 	
-	rayProg.bind();
-	rayProg.setUniformFloat("near", camera.getNear());
-	rayProg.setUniformFloat("far", camera.getFar());
-	
-	Timer timer;
 	input.poll();
     unsigned i = 0;
     double t = glfwGetTime();
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
+        com_p.IVP = camera.getIVP();
+        com_p.eye = vec4(camera.getEye(), 0.0f);
+        camUBO.upload(&com_p.IVP, sizeof(com_p));
 		
 		rayProg.bind();
-		rayProg.setUniform("IVP", camera.getIVP());
-		rayProg.setUniform("eye", camera.getEye());
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		rayProg.call(callsizeX, callsizeY, 1);
 		
 		colorProg.bind();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))
 			colorProg.setUniform("light_pos", camera.getEye());
-		colorProg.setUniform("IVP", camera.getIVP());
-		colorProg.setUniform("eye", camera.getEye());
-		dbuf.bind(0);
-		colorProg.setUniformInt("dbuf", 0);
+		dbuf.bind(0, "dbuf", colorProg);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		screen.draw();
 		
