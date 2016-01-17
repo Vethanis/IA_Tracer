@@ -8,14 +8,31 @@ layout(std140, binding=2) uniform CamBlock
 {
 	mat4 IVP;
 	vec4 eye;
-	vec4 nfp;	// near, far, num_prims
+	vec4 nfp;	// near, far
+	ivec4 whnp; // width, height, num_prims
 };
 
 #define EYE eye.xyz
 #define NEAR nfp.x
 #define FAR nfp.y
-#define NPRIMS int(nfp.z)
-#define MAX_DEPTH 10
+#define NPRIMS whnp.z
+#define WIDTH whnp.x
+#define HEIGHT whnp.y
+#define MAX_DEPTH whnp.z
+
+float invNear = 1.0f/NEAR;
+float invFar = 1.0f/FAR;
+float invfmn = invFar - invNear;
+float expd = 1.0f / invfmn;
+float toExp(float z){
+	return (1./z - invNear) * expd;
+}
+float toLin(float f){
+	return 1.0 / (f * invfmn + invNear);
+}
+float toNF(float l){
+	return NEAR + l * (FAR - NEAR);
+}
 
 vec2 iadd(vec2 a, vec2 b){return a + b;}
 vec2 iadd(vec2 a, float b){return a + b;}
@@ -190,17 +207,8 @@ vec2 map(vec3 a, vec3 b){
 	return isphere(c, d, e, vec3(0.), 1.);
 }
 
-float toExp(float z){
-	return (1./z - 1./NEAR) / (1./FAR - 1./NEAR);
-}
-float toLin(float f){
-	return 1.0 / (f * (1./FAR - 1./NEAR) + (1./NEAR));
-}
-
 vec3 getPos(vec2 uv, float z){
-	z = NEAR + z * (FAR - NEAR);
-	z = toExp(z);
-	vec4 t = vec4(uv, z, 1.);
+	vec4 t = vec4(uv, toExp(toNF(z)), 1.);
 	t = IVP * t;
 	return vec3(t / t.w);
 }
@@ -254,10 +262,12 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 
 void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 	int dim = (depth == 0) ? 1 : int(pow(2, depth));
-	int c = cr.x % dim;
-	int r = cr.y % dim;
-	float dif = 2.0 / dim;
-	u.x = -1.0 + c*dif;
+	int w = WIDTH / (depth+1);
+	int h = HEIGHT / (depth+1);
+	int c = cr.x / w;
+	int r = cr.y / h;
+	float dif = 2.0 / dim; // [0, dim] * 2/dim = [0, 2]
+	u.x = -1.0 + c*dif; // -1 + [0, 2] = [-1, 1]
 	u.y = -1.0 + c*dif + dif;
 	v.x = -1.0 + r*dif;
 	v.y = -1.0 + r*dif + dif;
@@ -280,8 +290,5 @@ void main(){
 	if (pix.x >= size.x || pix.y >= size.y) return;
 	vec2 F = subdivide(vec2(0., 1.), pix, 0.5);
 	if(F.y >= 1.) return;
-	float f = center(F);
-	f = NEAR + f * (FAR - NEAR);
-	f = toExp(f);
-	imageStore(dbuf, pix, vec4(f));
+	imageStore(dbuf, pix, vec4(toExp(toNF(center(F)))));
 }

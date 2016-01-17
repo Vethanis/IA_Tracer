@@ -8,13 +8,11 @@ layout(std140, binding=2) uniform CamBlock
 {
 	mat4 IVP;
 	vec4 eye;
-	vec4 nfp;	// near, far, num_prims
+	vec4 nfp;	// near, far
+	ivec4 whnp; // width, height, num_prims
 };
 
 #define EYE eye.xyz
-#define NEAR nfp.x
-#define FAR nfp.y
-#define NPRIMS int(nfp.z)
 
 uniform vec3 ambient;
 uniform vec3 light_color;
@@ -27,20 +25,13 @@ uniform float light_str;
 
 out vec4 out_color;
 
-float toExp(float z){
-	return (1./z - 1./NEAR) / (1./FAR - 1./NEAR);
-}
-float toLin(float f){
-	return 1.0 / (f * (1./FAR - 1./NEAR) + (1./NEAR));
-}
-
 vec3 getPos(vec2 uv, float z){
 	vec4 t = vec4(uv, z, 1.);
 	t = IVP * t;
 	return vec3(t / t.w);
 }
 
-#define DISCARD
+#define DEPTH
 
 void main(){
 	vec2 suv = uv * 0.5 + 0.5;

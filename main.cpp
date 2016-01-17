@@ -22,14 +22,32 @@ using namespace glm;
 #define NUM_PRIMS 200
 
 struct CommonParams{
-	mat4 IVP;
-	vec4 eye;
-	vec4 nfp;	// near, far, num_prims
+mat4 IVP;
+vec4 eye;
+vec4 nfp;	// near, far
+ivec4 whnp; // width, height, num_prims, max_depth
+	CommonParams(Camera& cam, int width, int height, int nprims)
+		: IVP(cam.getIVP()), eye(vec4(cam.getEye(), 1.0f)),
+		nfp(vec4(cam.getNear(), cam.getFar(), 0.0f, 0.0f)),
+		whnp(ivec4(width, height, nprims, 0)){
+			int md = 0;
+			int w = width;
+			while(w > 0){
+				w = w >> 1;
+				md++;
+			}
+			printf("%i\n", md);
+			whnp.z = md;
+		};
+	void update(Camera& cam){
+		IVP = cam.getIVP();
+		eye = vec4(cam.getEye(), 0.0f);
+	}
 };
 
 struct CSGParam{
-	vec4 center;
-	vec4 dim;
+vec4 center;
+vec4 dim;
 	CSGParam() : center(vec4(0.0f, 0.0f, 0.0f, -1.0f)), dim(vec4(0.0f, 0.0f, 0.0f, -1.0f)){};
 	CSGParam(const vec3& c, const vec3& d, float type, float mat){
 		center = vec4(c, type); dim = vec4(d, mat);
@@ -97,8 +115,7 @@ int main(int argc, char* argv[]){
 	}
 	SSBO paramssbo(&params[0], sizeof(params), 1);
 	*/
-	CommonParams com_p;
-	com_p.nfp = vec4(camera.getNear(), camera.getFar(), NUM_PRIMS*1.0f, 0.0f);
+	CommonParams com_p(camera, WIDTH, HEIGHT, NUM_PRIMS);
 	UBO camUBO(&com_p, sizeof(com_p), 2);
 	
     vec3 light_pos(5.0f, 5.0f, 5.0f);
@@ -115,9 +132,8 @@ int main(int argc, char* argv[]){
     double t = glfwGetTime();
     while(window.open()){
         input.poll(frameBegin(i, t), camera);
-        com_p.IVP = camera.getIVP();
-        com_p.eye = vec4(camera.getEye(), 0.0f);
-        camUBO.upload(&com_p.IVP, sizeof(com_p));
+        com_p.update(camera);
+        camUBO.upload(&com_p, sizeof(com_p));
 		
 		depthProg.bind();
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);

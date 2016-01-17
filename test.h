@@ -225,15 +225,15 @@ void toInterval(Camera& cam, vec2 u, vec2 v, vec2 t, vec3& l, vec3& h){
 
 vec2 strace(Camera& cam, vec2 u, vec2 v, vec2 t, float e){
 	for(int i = 0; i < 60; i++){
-		printf("i: %i\n", i);
+		//printf("i: %i\n", i);
 		vec2 cur = inear(t);
-		printf("t: ", i);print(cur);
+		//printf("t: ", i);print(cur);
 		vec3 l, h;
 		toInterval(cam, u, v, t, l, h);
 		//printf("l: ");print(l);
 		//printf("h: ");print(h);
 		vec2 F = map(l, h);
-		printf("F: ");print(F);
+		//printf("F: ");print(F);
 		if(contains(F, 0.0f)){
 			if(width(cur) < e)
 				return cur;
@@ -241,12 +241,12 @@ vec2 strace(Camera& cam, vec2 u, vec2 v, vec2 t, float e){
 			continue;
 		}		
 		cur = ifar(t);
-		printf("t: ", i);print(cur);
+		//printf("t: ", i);print(cur);
 		toInterval(cam, u, v, t, l, h);
 		//printf("l: ");print(l);
 		//printf("h: ");print(h);
 		F = map(l, h);
-		printf("F: ");print(F);
+		//printf("F: ");print(F);
 		if(contains(F, 0.0f)){
 			if(width(cur) < e)
 				return cur;
@@ -254,7 +254,7 @@ vec2 strace(Camera& cam, vec2 u, vec2 v, vec2 t, float e){
 			continue;
 		}
 		t = ipop(t);
-		printf("t: ", i);print(t);
+		//printf("t: ", i);print(t);
 		if(t.y > 1.0f || t.x < 0.0f) break;
 	}
 	return vec2(1.0f);
@@ -262,8 +262,10 @@ vec2 strace(Camera& cam, vec2 u, vec2 v, vec2 t, float e){
 
 void getUVs(vec2& u, vec2& v, ivec2 cr, int depth){
 	int dim = (depth == 0) ? 1 : int(pow(2, depth));
-	int c = cr.x % dim;
-	int r = cr.y % dim;
+	int w = 1024 / (depth+1);
+	int h = 1024 / (depth+1);
+	int c = cr.x  / w;
+	int r = cr.y  / h;
 	float dif = 2.0f / dim;
 	u.x = -1.0f + c*dif;
 	u.y = -1.0f + c*dif + dif;
@@ -273,16 +275,10 @@ void getUVs(vec2& u, vec2& v, ivec2 cr, int depth){
 
 vec2 subdivide(Camera& cam, vec2 t, ivec2 cr, float e){
 	vec2 u, v;
-	printf("id: %i\n", cr.x+cr.y*256);
 	for(int j = 0; j < MAX_DEPTH; j++){
 		getUVs(u, v, cr, j);
-		printf("depth: %i\n", j);
-		printf("e: %f\n", e);
-		print(u);
-		print(v);
-		print(t);
+		if(j == 4){print(u);print(v);}
 		t = strace(cam, u, v, t, e);
-		print(t);
 		if(t.y >= 1.f) return vec2(1.f);
 		e = e * 0.5f;
 	}
@@ -291,16 +287,16 @@ vec2 subdivide(Camera& cam, vec2 t, ivec2 cr, float e){
 
 void test(Camera& cam, Texture& dbuf, ivec2 WH){
 	//#pragma omp parallel for
-	//for(int i = 0; i < WH.x*WH.y; i++){
-		int i = WH.x*WH.y / 2;
+	for(int i = 0; i < WH.x*WH.y; i++){
+		printf("id: %i\n", i);
 		ivec2 pix = ivec2(i%WH.x, i/WH.x);
 		vec2 F = subdivide(cam, vec2(0.f, 1.f), pix, 0.1f);
-		//if(F.y >= 1.f) continue;
+		if(F.y >= 1.f) continue;
 		float f = center(F);
 		f = NEAR + f * (FAR - NEAR);
 		f = toExp(cam, f);
 		dbuf.setPixel(pix, f);
-	//}
+	}
 }
 
 #endif
