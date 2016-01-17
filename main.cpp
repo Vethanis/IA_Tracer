@@ -11,6 +11,8 @@
 #include "SSBO.h"
 #include "UBO.h"
 
+//#include "test.h"
+
 #include <random>
 #include "time.h"
 
@@ -51,6 +53,7 @@ double frameBegin(unsigned& i, double& t){
     return dt;
 }
 
+
 int main(int argc, char* argv[]){
 	if(argc != 3){
 		cout << argv[0] << " <screen width> <screen height>" << endl;
@@ -65,36 +68,40 @@ int main(int argc, char* argv[]){
 	vec2 ddy(0.0f, 2.0f/HEIGHT);
 	unsigned callsizeX = WIDTH / 8 + ((WIDTH % 8) ? 1 : 0);
 	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
-	camera.setEye({0.0f, 0.f, 2.f});
-	camera.setPlanes(0.1f, 100.0f);
+	//camera.setEye({0.0f, 2.f, -.5f});
+	//camera.pitch(-90.0f);
+	//camera.setFov(90.0f);
+	//camera.setPlanes(0.1f, 400.0f);
 	camera.resize(WIDTH, HEIGHT);
 	camera.update();
 	
-	Window window(WIDTH, HEIGHT, 4, 3, "IA Ray Casting");
+	Window window(WIDTH, HEIGHT, 4, 3, "");
 	Input input(window.getWindow());
 	GLScreen screen;
-	ComputeShader rayProg("rmarch.glsl");
+	//ComputeShader rayProg("rmarch.glsl");
+	ComputeShader depthProg("depth.glsl");
 	ComputeShader clearProg("clear.glsl");
 	GLProgram colorProg("fullscreen.glsl", "color.glsl");
 	Texture dbuf(WIDTH, HEIGHT, FLOAT2);
 	dbuf.setCSBinding(0);
-	CSGParam params[NUM_PRIMS];
+	/*CSGParam params[NUM_PRIMS];
 	for(int i = 0; i < NUM_PRIMS; i++){
 		float a[6];
-		for(int j = 0; j < 3;j++)	// [-50, 50]
-			a[j] = rand()%100 - 50.0f;
+		for(int j = 0; j < 3;j++)
+			a[j] = (rand()%2000 - 1000.0f) / 200.0f;
 		for(int j = 3; j < 6; j++)	// [0,100]
-			a[j] = rand()%1000 / 100.0f;
+			a[j] = 0.1f + ((rand()%300) / 100.0f);
 		float t = (float)(rand()%2);
-		float m = (float)(rand()%2);
+		float m = (float)i / NUM_PRIMS;
 		params[i] = CSGParam({a[0], a[1], a[2]}, {a[3], a[4], a[5]}, t, m);
 	}
 	SSBO paramssbo(&params[0], sizeof(params), 1);
+	*/
 	CommonParams com_p;
 	com_p.nfp = vec4(camera.getNear(), camera.getFar(), NUM_PRIMS*1.0f, 0.0f);
 	UBO camUBO(&com_p, sizeof(com_p), 2);
 	
-    vec3 light_pos(3.0f, 3.0f, 3.0f);
+    vec3 light_pos(5.0f, 5.0f, 5.0f);
     colorProg.bind();
 	colorProg.setUniform("ambient", vec3(0.001f, 0.0005f, 0.0005f));
 	colorProg.setUniform("light_color", vec3(1.0f));
@@ -112,9 +119,11 @@ int main(int argc, char* argv[]){
         com_p.eye = vec4(camera.getEye(), 0.0f);
         camUBO.upload(&com_p.IVP, sizeof(com_p));
 		
-		rayProg.bind();
+		depthProg.bind();
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		rayProg.call(callsizeX, callsizeY, 1);
+		depthProg.call(callsizeX, callsizeY, 1);
+		
+		//test(camera, dbuf, ivec2(WIDTH, HEIGHT));
 		
 		colorProg.bind();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))

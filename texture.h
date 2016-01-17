@@ -2,6 +2,7 @@
 #define TEXTURE_H
 
 #include <string>
+#include "glm/glm.hpp"
 
 enum TEXTURETYPE{
 	COLOR,
@@ -32,6 +33,7 @@ public:
 	unsigned getID(){return tex_id;};
 	unsigned getWidth(){return width;};
 	unsigned getHeight(){return height;};
+	void setPixel(glm::ivec2 cr, float d);
 };
 
 #endif

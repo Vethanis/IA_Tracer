@@ -1,9 +1,9 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#define GLM_SWIZZLE
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
-#include <algorithm>
 
 #define up_vec glm::vec3(0.0f, 1.0f, 0.0f)
 
@@ -72,7 +72,7 @@ public:
 	}
 	void pitch(float amt){
 		m_pitch += amt;
-		m_pitch = std::max(std::min(89.0f, m_pitch), -89.0f);
+		m_pitch = glm::max(glm::min(89.0f, m_pitch), -89.0f);
 	}
 	void yaw(float amt){
 		m_yaw -= amt;

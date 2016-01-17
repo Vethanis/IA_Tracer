@@ -1,30 +1,26 @@
-#version 430 core
+#ifndef TEST_H
+#define TEST_H
 
-layout(local_size_x = 8, local_size_y = 8) in;
+#include "camera.h"
+#include "texture.h"
+#include "omp.h"
+#include "debugmacro.h"
 
-layout(binding = 0, rg32f) uniform image2D dbuf;
+using namespace glm;
 
-layout(std140, binding=2) uniform CamBlock
-{
-	mat4 IVP;
-	vec4 eye;
-	vec4 nfp;	// near, far, num_prims
-};
-
-#define EYE eye.xyz
-#define NEAR nfp.x
-#define FAR nfp.y
-#define NPRIMS int(nfp.z)
 #define MAX_DEPTH 10
+#define FAR cam.getFar()
+#define NEAR cam.getNear()
+#define EYE cam.getEye()
 
 vec2 iadd(vec2 a, vec2 b){return a + b;}
 vec2 iadd(vec2 a, float b){return a + b;}
 vec2 iadd(float a, vec2 b){return a + b;}
-vec2 isub(vec2 a, vec2 b){return a - b.yx;}
+vec2 isub(vec2 a, vec2 b){return a - b.yx();}
 vec2 isub(vec2 a, float b){return a - b;}
-vec2 isub(float a, vec2 b){return a - b.yx;}
+vec2 isub(float a, vec2 b){return a - b.yx();}
 vec2 imul(vec2 a, vec2 b){
-	vec4 f = vec4(a.xxyy * b.xyxy);	
+	vec4 f = vec4(a.xxyy() * b.xyxy());	
 	return vec2(
 		min(min(f[0],f[1]),min(f[2],f[3])),
 		max(max(f[0],f[1]),max(f[2],f[3])));
@@ -42,13 +38,13 @@ vec2 imul(vec2 b, float a){
 		max(f[0],f[1]));
 }
 vec2 ipow2(vec2 a){	
-	return (a.x>=0.0)?vec2(a*a):(a.y<0.0)?vec2((a*a).yx):vec2(0.0,max(a.x*a.x,a.y*a.y));
+	return (a.x>=0.0f)?vec2(a*a):(a.y<0.0f)?vec2((a*a).yx()):vec2(0.0f,max(a.x*a.x,a.y*a.y));
 }
 vec2 ipow4(vec2 a){
-	return (a.x>=0.0)?vec2(a*a*a*a):(a.y<0.0)?vec2((a*a*a*a).yx):vec2(0.0,max(a.x*a.x*a.x*a.x,a.y*a.y*a.y*a.y));
+	return (a.x>=0.0f)?vec2(a*a*a*a):(a.y<0.0f)?vec2((a*a*a*a).yx()):vec2(0.0f,max(a.x*a.x*a.x*a.x,a.y*a.y*a.y*a.y));
 }
 vec2 ipow6(vec2 a){
-	return (a.x>=0.0)?vec2(a*a*a*a*a*a):(a.y<0.0)?vec2((a*a*a*a*a*a).yx):vec2(0.0,max(a.x*a.x*a.x*a.x*a.x*a.x,a.y*a.y*a.y*a.y*a.y*a.y));
+	return (a.x>=0.0f)?vec2(a*a*a*a*a*a):(a.y<0.0f)?vec2((a*a*a*a*a*a).yx()):vec2(0.0f,max(a.x*a.x*a.x*a.x*a.x*a.x,a.y*a.y*a.y*a.y*a.y*a.y));
 }
 vec2 imin(vec2 a, vec2 b){
 	return vec2(min(a.x,b.x),min(a.y,b.y));
@@ -78,9 +74,9 @@ vec2 iz(vec3 a, vec3 b){
 	return vec2(min(a.z, b.z), max(a.z, b.z));
 }
 vec2 iabs(vec2 a){
-  if (a.x >= 0.0)
+  if (a.x >= 0.0f)
       return a;
-  if (a.y <= 0.0) 
+  if (a.y <= 0.0f) 
       return vec2(-a.y, -a.x);
   return vec2(0, max(-a.x, a.y));
 }
@@ -91,20 +87,20 @@ vec2 iintersect(vec2 a, vec2 b){
 	return vec2(max(a.x, b.x), min(a.y, b.y));
 }
 vec2 ismoothmin(vec2 a, vec2 b, float r){
-	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0)));
-	return isub(imin(a, b), imul(ipow2(e), 0.25/r));
+	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0f)));
+	return isub(imin(a, b), imul(ipow2(e), 0.25f/r));
 }
 vec2 ismoothmax(vec2 a, vec2 b, float r){
-	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0)));
-	return iadd(imax(a, b), imul(ipow2(e), 0.25/r));
+	vec2 e = imin(vec2(r), imax(isub(vec2(r), iabs(isub(a, b))), vec2(0.0f)));
+	return iadd(imax(a, b), imul(ipow2(e), 0.25f/r));
 }
 vec4 imod2(vec2 a, float b){
 	if ((a.y - a.x) >= b)
-       		return vec4(0.0, b, 0.0, b);
+       		return vec4(0.0f, b, 0.0f, b);
 	else {
             a = mod(a,b);
             if (a.y < a.x)
-                return vec4(a.x,b,0.0,a.y);
+                return vec4(a.x,b,0.0f,a.y);
                 return vec4(a,a);
 	}
 }
@@ -115,8 +111,8 @@ vec2 ilength(vec2 a, vec2 b){
 	return isqrt(ipow2(a) + ipow2(b));
 }
 vec2 itri(vec2 x, float p){
-	vec4 m = imod2(x + (p*0.5), p) - 0.5*p;
-	return iunion(iabs(m.xy), iabs(m.zw));
+	vec4 m = imod2(x + (p*0.5f), p) - 0.5f*p;
+	return iunion(iabs(m.xy()), iabs(m.zw()));
 }
 vec2 itorus(vec2 x, vec2 y, vec2 z, vec2 t){
 	return isub(ilength(isub(ilength(x, y), t.x), z), t.y);
@@ -155,7 +151,7 @@ float width(vec2 a){
 	return a.y - a.x;
 }
 float center(vec2 a){
-	return 0.5*(a.x+a.y);
+	return 0.5f*(a.x+a.y);
 }
 vec2 widen(vec2 t, float f){
 	return vec2(t.x - f, t.y + f);
@@ -168,69 +164,76 @@ vec2 ifar(vec2 a){
 }
 vec2 ipop(vec2 a){
 	float dd = center(a);
-	return vec2(a.x+dd, a.y+2.*dd);
+	return vec2(a.x+dd, a.y+2.0f*dd);
 }
 float maxabs(vec2 a){
 	return max(abs(a.x), abs(a.y));
 }
 
 vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
-	vec2 d = itri(a, 40.0);
-	vec2 e = itri(b, 40.0);
-	vec2 f = itri(c, 40.0);
+	vec2 d = itri(a, 40.0f);
+	vec2 e = itri(b, 40.0f);
+	vec2 f = itri(c, 40.0f);
 	return imin(
-		itorus(d, e, f, vec2(1.0, 0.2)),
-		icube(d, e, f, 0.5)
+		itorus(d, e, f, vec2(1.0f, 0.2f)),
+		icube(d, e, f, 0.5f)
 		);
 }
 
+float toExp(Camera& cam, float z){
+	return (1.f/z - 1.f/NEAR) / (1.f/FAR - 1.f/NEAR);
+}
+float toLin(Camera& cam, float f){
+	return 1.0f / (f * (1.f/FAR - 1.f/NEAR) + (1.f/NEAR));
+}
+
 vec2 map(vec3 a, vec3 b){
-	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
+	vec2 c = vec2(a.x, b.x);
+	vec2 d = vec2(a.y, b.y);
+	vec2 e = vec2(a.z, b.z);
 	//return paniq_scene(c, d, e);
-	return isphere(c, d, e, vec3(0.), 1.);
+	return isphere(c, d, e, vec3(0.f), 1.f);
 }
 
-float toExp(float z){
-	return (1./z - 1./NEAR) / (1./FAR - 1./NEAR);
-}
-float toLin(float f){
-	return 1.0 / (f * (1./FAR - 1./NEAR) + (1./NEAR));
-}
-
-vec3 getPos(vec2 uv, float z){
+vec3 getPos(Camera& cam, vec2 uv, float z){
 	z = NEAR + z * (FAR - NEAR);
-	z = toExp(z);
-	vec4 t = vec4(uv, z, 1.);
-	t = IVP * t;
+	z = toExp(cam, z);
+	vec4 t = vec4(uv, z, 1.f);
+	t = cam.getIVP() * t;
 	return vec3(t / t.w);
 }
 
-void toInterval(vec2 u, vec2 v, vec2 t, inout vec3 l, inout vec3 h){
-	vec3 d = getPos(vec2(u.x, v.x), t.x);
+void toInterval(Camera& cam, vec2 u, vec2 v, vec2 t, vec3& l, vec3& h){
+	vec3 d = getPos(cam, vec2(u.x, v.x), t.x);
 	{
-		vec3 e = getPos(vec2(u.x, v.x), t.y);
+		vec3 e = getPos(cam, vec2(u.x, v.x), t.y);
 		l = imin(d, e); h = imax(d, e);
 	}
-	d = getPos(vec2(u.x, v.y), t.x);
+	d = getPos(cam, vec2(u.x, v.y), t.x);
 	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.x, v.y), t.y);
+	d = getPos(cam, vec2(u.x, v.y), t.y);
 	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.y, v.x), t.x);
+	d = getPos(cam, vec2(u.y, v.x), t.x);
 	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.y, v.x), t.y);
+	d = getPos(cam, vec2(u.y, v.x), t.y);
 	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.y, v.y), t.x);
+	d = getPos(cam, vec2(u.y, v.y), t.x);
 	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.y, v.y), t.y);
+	d = getPos(cam, vec2(u.y, v.y), t.y);
 	l = imin(l, d); h = imax(h, d);
 }
 
-vec2 strace(vec2 u, vec2 v, vec2 t, float e){
+vec2 strace(Camera& cam, vec2 u, vec2 v, vec2 t, float e){
 	for(int i = 0; i < 60; i++){
+		printf("i: %i\n", i);
 		vec2 cur = inear(t);
+		printf("t: ", i);print(cur);
 		vec3 l, h;
-		toInterval(u, v, t, l, h);
+		toInterval(cam, u, v, t, l, h);
+		//printf("l: ");print(l);
+		//printf("h: ");print(h);
 		vec2 F = map(l, h);
+		printf("F: ");print(F);
 		if(contains(F, 0.0f)){
 			if(width(cur) < e)
 				return cur;
@@ -238,8 +241,12 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 			continue;
 		}		
 		cur = ifar(t);
-		toInterval(u, v, t, l, h);
+		printf("t: ", i);print(cur);
+		toInterval(cam, u, v, t, l, h);
+		//printf("l: ");print(l);
+		//printf("h: ");print(h);
 		F = map(l, h);
+		printf("F: ");print(F);
 		if(contains(F, 0.0f)){
 			if(width(cur) < e)
 				return cur;
@@ -247,41 +254,53 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 			continue;
 		}
 		t = ipop(t);
-		if(t.y > 1.) break;
+		printf("t: ", i);print(t);
+		if(t.y > 1.0f || t.x < 0.0f) break;
 	}
-	return vec2(1.);
+	return vec2(1.0f);
 }
 
-void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
+void getUVs(vec2& u, vec2& v, ivec2 cr, int depth){
 	int dim = (depth == 0) ? 1 : int(pow(2, depth));
 	int c = cr.x % dim;
 	int r = cr.y % dim;
-	float dif = 2.0 / dim;
-	u.x = -1.0 + c*dif;
-	u.y = -1.0 + c*dif + dif;
-	v.x = -1.0 + r*dif;
-	v.y = -1.0 + r*dif + dif;
+	float dif = 2.0f / dim;
+	u.x = -1.0f + c*dif;
+	u.y = -1.0f + c*dif + dif;
+	v.x = -1.0f + r*dif;
+	v.y = -1.0f + r*dif + dif;
 }
 
-vec2 subdivide(vec2 t, ivec2 cr, float e){
+vec2 subdivide(Camera& cam, vec2 t, ivec2 cr, float e){
 	vec2 u, v;
+	printf("id: %i\n", cr.x+cr.y*256);
 	for(int j = 0; j < MAX_DEPTH; j++){
 		getUVs(u, v, cr, j);
-		t = strace(u, v, t, e);
-		if(t.y >= 1.) return vec2(1.);
-		e = e * 0.5;
+		printf("depth: %i\n", j);
+		printf("e: %f\n", e);
+		print(u);
+		print(v);
+		print(t);
+		t = strace(cam, u, v, t, e);
+		print(t);
+		if(t.y >= 1.f) return vec2(1.f);
+		e = e * 0.5f;
 	}
 	return t;
 }
 
-void main(){
-	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
-	ivec2 size = imageSize(dbuf);
-	if (pix.x >= size.x || pix.y >= size.y) return;
-	vec2 F = subdivide(vec2(0., 1.), pix, 0.5);
-	if(F.y >= 1.) return;
-	float f = center(F);
-	f = NEAR + f * (FAR - NEAR);
-	f = toExp(f);
-	imageStore(dbuf, pix, vec4(f));
+void test(Camera& cam, Texture& dbuf, ivec2 WH){
+	//#pragma omp parallel for
+	//for(int i = 0; i < WH.x*WH.y; i++){
+		int i = WH.x*WH.y / 2;
+		ivec2 pix = ivec2(i%WH.x, i/WH.x);
+		vec2 F = subdivide(cam, vec2(0.f, 1.f), pix, 0.1f);
+		//if(F.y >= 1.f) continue;
+		float f = center(F);
+		f = NEAR + f * (FAR - NEAR);
+		f = toExp(cam, f);
+		dbuf.setPixel(pix, f);
+	//}
 }
+
+#endif

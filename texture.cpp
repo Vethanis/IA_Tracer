@@ -54,7 +54,8 @@ Texture::Texture(int w, int h, TEXTURETYPE t){
 		}
 	}
 	
-	glBindTexture(GL_TEXTURE_2D, 0);	MYGLERRORMACRO
+	glBindTexture(GL_TEXTURE_2D, 0);	
+	MYGLERRORMACRO
 }
 
 Texture::~Texture(){
@@ -62,8 +63,10 @@ Texture::~Texture(){
 }
 
 void Texture::bind(int channel, const std::string& uname, GLProgram& prog){
-	glActiveTexture(GL_TEXTURE0 + channel);MYGLERRORMACRO
-	glBindTexture(GL_TEXTURE_2D, tex_id);MYGLERRORMACRO
+	glActiveTexture(GL_TEXTURE0 + channel);
+	MYGLERRORMACRO
+	glBindTexture(GL_TEXTURE_2D, tex_id);
+	MYGLERRORMACRO
 	prog.setUniformInt(uname, channel);
 }
 
@@ -99,6 +102,14 @@ void Texture::setCSBinding(int binding){
 			break;
 		}
 	}*/
-	glBindImageTexture(0, tex_id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RG32F);MYGLERRORMACRO
+	glBindImageTexture(0, tex_id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RG32F);
+	MYGLERRORMACRO
+}
+
+
+void Texture::setPixel(glm::ivec2 cr, float d){
+	float f[2] = {d, d};
+	glTextureSubImage2D(tex_id, 0, cr.x, cr.y, 1, 1, GL_RG, GL_FLOAT, &f[0]);
+	MYGLERRORMACRO
 }
 
