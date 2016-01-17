@@ -86,6 +86,7 @@ int main(int argc, char* argv[]){
 	vec2 ddy(0.0f, 2.0f/HEIGHT);
 	unsigned callsizeX = WIDTH / 8 + ((WIDTH % 8) ? 1 : 0);
 	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
+	camera.setEye({0.0f, 0.0f, 3.0f});
 	//camera.setEye({0.0f, 2.f, -.5f});
 	//camera.pitch(-90.0f);
 	//camera.setFov(90.0f);

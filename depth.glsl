@@ -174,7 +174,7 @@ float width(vec2 a){
 float center(vec2 a){
 	return 0.5*(a.x+a.y);
 }
-vec2 widen(vec2 t, float f){
+vec2 iwiden(vec2 t, float f){
 	return vec2(t.x - f, t.y + f);
 }
 vec2 inear(vec2 a){
@@ -189,6 +189,9 @@ vec2 ipop(vec2 a){
 }
 float maxabs(vec2 a){
 	return max(abs(a.x), abs(a.y));
+}
+vec2 iclamp(vec2 t){
+	return vec2(max(0.0f, t.x), min(1.0f, t.y));
 }
 
 vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
@@ -205,6 +208,7 @@ vec2 map(vec3 a, vec3 b){
 	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
 	//return paniq_scene(c, d, e);
 	return isphere(c, d, e, vec3(0.), 1.);
+	//return icube(c, d, e, 0.5f);
 }
 
 vec3 getPos(vec2 uv, float z){
@@ -240,7 +244,7 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 		toInterval(u, v, t, l, h);
 		vec2 F = map(l, h);
 		if(contains(F, 0.0f)){
-			if(width(cur) < e)
+			if(maxabs(F) < e)
 				return cur;
 			t = cur;
 			continue;
@@ -249,7 +253,7 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 		toInterval(u, v, t, l, h);
 		F = map(l, h);
 		if(contains(F, 0.0f)){
-			if(width(cur) < e)
+			if(maxabs(F) < e)
 				return cur;
 			t = cur;
 			continue;
@@ -275,7 +279,7 @@ void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 
 vec2 subdivide(vec2 t, ivec2 cr, float e){
 	vec2 u, v;
-	for(int j = 0; j < MAX_DEPTH-1; j++){
+	for(int j = 0; j < MAX_DEPTH; j++){
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
 		if(t.y >= 1.) return vec2(1.);
@@ -288,7 +292,7 @@ void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
-	vec2 F = subdivide(vec2(0., 1.), pix, 0.5);
+	vec2 F = subdivide(vec2(0., 1.), pix, 100.f);
 	if(F.y >= 1.) return;
 	imageStore(dbuf, pix, vec4(toExp(toNF(center(F)))));
 }
