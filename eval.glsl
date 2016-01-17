@@ -12,16 +12,11 @@ layout(std430, binding=1) buffer CSGBlock
 	CSGParam csgp[];
 };
 
-layout(std140, binding=2) uniform CamBlock
-{
-	mat4 IVP;
-	vec4 eye;
-	vec4 nfp;	// near, far, num_prims
-};
-#define EYE eye.xyz
-#define NEAR nfp.x
-#define FAR nfp.y
-#define NPRIMS int(nfp.z)
+uniform mat4 IVP;
+uniform vec3 eye;
+uniform float near;
+uniform float far;
+uniform int num_prims;
 
 vec3 getPos(in vec2 uv, in float z){
 	vec4 t = vec4(uv, z, 1.);

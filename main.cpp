@@ -63,6 +63,8 @@ int main(int argc, char* argv[]){
 	const int HEIGHT = atoi(argv[2]);
 	vec2 ddx(2.0f/WIDTH, 0.0f);
 	vec2 ddy(0.0f, 2.0f/HEIGHT);
+	unsigned callsizeX = WIDTH / 8 + ((WIDTH % 8) ? 1 : 0);
+	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
 	camera.setEye({0.0f, 0.f, 2.f});
 	camera.setPlanes(0.1f, 100.0f);
 	camera.resize(WIDTH, HEIGHT);
@@ -70,12 +72,10 @@ int main(int argc, char* argv[]){
 	
 	Window window(WIDTH, HEIGHT, 4, 3, "IA Ray Casting");
 	Input input(window.getWindow());
+	GLScreen screen;
 	ComputeShader rayProg("rmarch.glsl");
 	ComputeShader clearProg("clear.glsl");
-	unsigned callsizeX = WIDTH / 8 + ((WIDTH % 8) ? 1 : 0);
-	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
 	GLProgram colorProg("fullscreen.glsl", "color.glsl");
-	GLScreen screen;
 	Texture dbuf(WIDTH, HEIGHT, FLOAT2);
 	dbuf.setCSBinding(0);
 	CSGParam params[NUM_PRIMS];
@@ -98,7 +98,6 @@ int main(int argc, char* argv[]){
     colorProg.bind();
 	colorProg.setUniform("ambient", vec3(0.001f, 0.0005f, 0.0005f));
 	colorProg.setUniform("light_color", vec3(1.0f));
-	colorProg.setUniform("base_color", vec3(0.7f, 0.1f, 0.01f));
 	colorProg.setUniform("light_pos", light_pos);
 	colorProg.setUniform("ddx", ddx);
 	colorProg.setUniform("ddy", ddy);
@@ -124,9 +123,9 @@ int main(int argc, char* argv[]){
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		screen.draw();
 		
-        window.swap();
         clearProg.bind();
         clearProg.call(callsizeX, callsizeY, 1);
+        window.swap();
     }
     return 0;
 }

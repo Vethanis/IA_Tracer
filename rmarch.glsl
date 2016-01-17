@@ -76,7 +76,7 @@ void main(){
 	vec2 uv = vec2(pix) / vec2(size.x - 1, size.y - 1);
 	uv = uv * 2. - 1.;
 	vec3 rd = normalize(getPos(uv, 1.0f) - EYE);
-	vec2 lzm = vec2(NEAR, -1.0f);
+	vec2 lzm = vec2(FAR, -1.0f);
 	for(int i = 0; i < NPRIMS; i++){
 		vec2 r = trace(rd, lzm.x, 0.00001f, i);
 		if(r.x < lzm.x) lzm = r;
