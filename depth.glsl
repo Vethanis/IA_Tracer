@@ -262,12 +262,12 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 
 void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 	int dim = (depth == 0) ? 1 : int(pow(2, depth));
-	int w = WIDTH / (depth+1);
-	int h = HEIGHT / (depth+1);
+	int w = WIDTH / dim; // [WIDTH, log2(WIDTH]
+	int h = HEIGHT / dim;
 	int c = cr.x / w;
 	int r = cr.y / h;
-	float dif = 2.0 / dim; // [0, dim] * 2/dim = [0, 2]
-	u.x = -1.0 + c*dif; // -1 + [0, 2] = [-1, 1]
+	float dif = 2.0 / dim; 
+	u.x = -1.0 + c*dif; 
 	u.y = -1.0 + c*dif + dif;
 	v.x = -1.0 + r*dif;
 	v.y = -1.0 + r*dif + dif;
@@ -275,7 +275,7 @@ void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 
 vec2 subdivide(vec2 t, ivec2 cr, float e){
 	vec2 u, v;
-	for(int j = 0; j < MAX_DEPTH; j++){
+	for(int j = 0; j < MAX_DEPTH-1; j++){
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
 		if(t.y >= 1.) return vec2(1.);
