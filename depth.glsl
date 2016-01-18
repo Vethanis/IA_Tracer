@@ -174,9 +174,6 @@ float width(vec2 a){
 float center(vec2 a){
 	return 0.5*(a.x+a.y);
 }
-vec2 iwiden(vec2 t, float f){
-	return vec2(t.x - f, t.y + f);
-}
 vec2 inear(vec2 a){
 	return vec2(a.x, center(a));
 }
@@ -190,14 +187,11 @@ vec2 ipop(vec2 a){
 float maxabs(vec2 a){
 	return max(abs(a.x), abs(a.y));
 }
-vec2 iclamp(vec2 t){
-	return vec2(max(NEAR, t.x), min(FAR, t.y));
-}
 
 vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
-	vec2 d = itri(a, 40.0f);
-	vec2 e = itri(b, 40.0f);
-	vec2 f = itri(c, 40.0f);
+	vec2 d = itri(a, 5.0f);
+	vec2 e = itri(b, 5.0f);
+	vec2 f = itri(c, 5.0f);
 	return imin(
 		itorus(d, e, f, vec2(1.0f, 0.2f)),
 		icube(d, e, f, 0.5f)
@@ -212,7 +206,7 @@ vec2 map(vec3 a, vec3 b){
 }
 
 vec3 getPos(vec2 uv, float z){
-	vec4 t = vec4(uv, toExp(z), 1.f);
+	vec4 t = vec4(uv, z, 1.f);
 	t = IVP * t;
 	return vec3(t / t.w);
 }
@@ -238,8 +232,8 @@ void toInterval(vec2 u, vec2 v, vec2 t, inout vec3 l, inout vec3 h){
 }
 
 vec2 strace(vec2 u, vec2 v, vec2 t, float e){
-	t.y = FAR;
-	const int sz = 16;
+	t.y = 1.0f;
+	const int sz = 8;
 	vec2 stack[sz];
 	int end = 0;
 	stack[end] = ifar(t);
@@ -265,7 +259,7 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 		}
 		if(entries <= 0) break;
 	}
-	return vec2(FAR);
+	return vec2(1.0f);
 }
 
 void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
@@ -286,8 +280,8 @@ vec2 subdivide(vec2 t, ivec2 cr, float e){
 	for(int j = 0; j < MAX_DEPTH; j++){
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
-		if(t.y >= FAR) return vec2(FAR);
-		e = e * 0.25;
+		if(t.y >= 1.0f) return vec2(1.0f);
+		e = e * 0.5;
 	}
 	return t;
 }
@@ -296,8 +290,8 @@ void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
-	vec2 F = subdivide(vec2(NEAR, FAR), pix, 10.0f);
-	if(F.y >= FAR) return;
-	imageStore(dbuf, pix, vec4(toExp(center(F))));
+	vec2 F = subdivide(vec2(0.1f, 1.0f), pix, 0.01f);
+	if(F.y >= 1.0f) return;
+	imageStore(dbuf, pix, vec4(center(F)));
 }
 

@@ -87,10 +87,11 @@ int main(int argc, char* argv[]){
 	unsigned callsizeX = WIDTH / 8 + ((WIDTH % 8) ? 1 : 0);
 	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
 	//camera.setEye({0.0f, 0.0f, 2.0f});
-	camera.setEye({0.0f, 2.f, -.5f});
-	camera.pitch(-90.0f);
-	camera.setFov(90.0f);
-	camera.setPlanes(0.1f, 400.0f);
+	//camera.setEye({0.0f, 2.f, -.5f});
+	//camera.pitch(-90.0f);
+	//camera.setFov(90.0f);
+	//camera.setPlanes(0.1f, 400.0f);
+	camera.setPlanes(0.1f, 50.0f);
 	camera.resize(WIDTH, HEIGHT);
 	camera.update();
 	
