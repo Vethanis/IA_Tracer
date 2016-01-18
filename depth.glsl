@@ -290,7 +290,7 @@ void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
-	vec2 F = subdivide(vec2(0.1f, 1.0f), pix, 0.001f);
+	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.001f);
 	if(F.y >= 1.0f) return;
 	imageStore(dbuf, pix, vec4(center(F)));
 }
