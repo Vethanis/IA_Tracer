@@ -18,7 +18,7 @@ layout(std140, binding=2) uniform CamBlock
 #define NPRIMS whnp.z
 #define WIDTH whnp.x
 #define HEIGHT whnp.y
-#define MAX_DEPTH whnp.z
+#define MAX_DEPTH whnp.w
 
 float invNear = 1.0f/NEAR;
 float invFar = 1.0f/FAR;
