@@ -208,8 +208,8 @@ vec2 l_scene(vec2 a, vec2 b, vec2 c){
 
 vec2 map(vec3 a, vec3 b){
 	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
-	//return l_scene(c, d, e);
-	return paniq_scene(c, d, e);
+	return l_scene(c, d, e);
+	//return paniq_scene(c, d, e);
 	//return isphere(c, d, e, vec3(0.f), 1.f);
 	//return icube(c, d, e, 0.5f);
 }
@@ -220,7 +220,7 @@ vec3 getPos(vec2 uv, float z){
 	return vec3(t / t.w);
 }
 
-vec2 trace(vec3 rd, vec2 t, float e){
+vec2 trace2(vec2 uv, vec2 t, float e){
 	const int sz = 16;
 	vec2 stack[sz];
 	int end = 0;
@@ -232,9 +232,9 @@ vec2 trace(vec3 rd, vec2 t, float e){
 		vec2 cur = stack[end];
 		end--; if(end < 0) end = sz-1;
 		entries--;
-		vec2 F = map(EYE+rd*cur.x, EYE+rd*cur.y);
+		vec2 F = map(getPos(uv, cur.x), getPos(uv, cur.y));
 		if(contains(F, 0.0f)){
-			if(maxabs(F) < e) return cur;
+			if(width(cur) < e) return cur;
 			end = (end+1) % sz;
 			stack[end] = ifar(cur);	 // push
 			end = (end+1) % sz;
@@ -244,7 +244,7 @@ vec2 trace(vec3 rd, vec2 t, float e){
 		}
 		if(entries <= 0) break;
 	}
-	return vec2(FAR);
+	return vec2(1.0f);
 }
 
 void toInterval(vec2 u, vec2 v, vec2 t, inout vec3 l, inout vec3 h){
@@ -329,10 +329,9 @@ void main(){
 	if (pix.x >= size.x || pix.y >= size.y) return;
 #ifdef UNIFORM
 	vec2 uv = (vec2(pix) / vec2(size)) * 2.0f - 1.0f;
-	vec3 rd = normalize(getPos(uv, 1.0f) - EYE);
-	vec2 F = trace(rd, vec2(NEAR, FAR), 0.0001f);
-	if(F.y >= FAR) return;
-	imageStore(dbuf, pix, vec4(toExp(center(F))));
+	vec2 F = trace2(uv, vec2(0.0f, 1.0f), 0.00001f);
+	if(F.y >= 1.0f) return;
+	imageStore(dbuf, pix, vec4(center(F)));
 #else
 	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.00005f);
 	if(F.y >= 1.0f) return;

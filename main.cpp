@@ -89,9 +89,9 @@ int main(int argc, char* argv[]){
 	unsigned callsizeY = HEIGHT / 8 + ((HEIGHT % 8) ? 1 : 0);
 	//camera.setEye({0.0f, 0.0f, 2.0f});
 	camera.setEye({0.0f, 2.f, -.5f});
-	camera.pitch(-90.0f);
-	camera.setFov(90.0f);
-	camera.setPlanes(0.1f, 400.0f);
+	//camera.pitch(-90.0f);
+	camera.setFov(60.0f);
+	camera.setPlanes(0.1f, 100.0f);
 	//camera.setPlanes(0.1f, 50.0f);
 	camera.resize(WIDTH, HEIGHT);
 	camera.update();
@@ -142,10 +142,7 @@ int main(int argc, char* argv[]){
 		
 		depthProg.bind();
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		timer.begin();
 		depthProg.call(callsizeX, callsizeY, 1);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		timer.endPrint();
 		
 		//test(camera, dbuf, ivec2(WIDTH, HEIGHT));
 		
