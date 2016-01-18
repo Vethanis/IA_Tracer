@@ -189,9 +189,9 @@ float maxabs(vec2 a){
 }
 
 vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
-	vec2 d = itri(a, 5.0f);
-	vec2 e = itri(b, 5.0f);
-	vec2 f = itri(c, 5.0f);
+	vec2 d = itri(a, 40.0f);
+	vec2 e = itri(b, 40.0f);
+	vec2 f = itri(c, 40.0f);
 	return imin(
 		itorus(d, e, f, vec2(1.0f, 0.2f)),
 		icube(d, e, f, 0.5f)
@@ -290,7 +290,7 @@ void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
-	vec2 F = subdivide(vec2(0.1f, 1.0f), pix, 0.01f);
+	vec2 F = subdivide(vec2(0.1f, 1.0f), pix, 0.001f);
 	if(F.y >= 1.0f) return;
 	imageStore(dbuf, pix, vec4(center(F)));
 }
