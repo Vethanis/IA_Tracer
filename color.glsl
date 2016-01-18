@@ -26,7 +26,7 @@ uniform float light_str;
 out vec4 out_color;
 
 vec3 getPos(vec2 uv, float z){
-	vec4 t = vec4(uv, z, 1.);
+	vec4 t = vec4(uv, z, 1.f);
 	t = IVP * t;
 	return vec3(t / t.w);
 }
@@ -34,38 +34,38 @@ vec3 getPos(vec2 uv, float z){
 #define NORMAL
 
 void main(){
-	vec2 suv = uv * 0.5 + 0.5;
+	vec2 suv = uv * 0.5f + 0.5f;
 	float z = texture(dbuf, suv).r;
 #ifndef DISCARD
-	if(z >= 1.) discard;
+	if(z >= 1.f) discard;
 #endif
 #ifdef COLOR
 	float mat = texture(dbuf, suv).g;
-	vec3 base_color = vec3(0.1f, 0.3f, 0.7f);
+	vec3 base_color = vec3(0.1f, 0.4f, 0.9f);
 	vec3 pos   = getPos(uv.xy, z);
-	vec3 xtan  = getPos(uv.xy+ddx, texture(dbuf, suv+.5*ddx).r) - pos;
-	vec3 ytan  = getPos(uv.xy+ddy, texture(dbuf, suv+.5*ddy).r) - pos;
+	vec3 xtan  = getPos(uv.xy+ddx, texture(dbuf, suv+.5f*ddx).r) - pos;
+	vec3 ytan  = getPos(uv.xy+ddy, texture(dbuf, suv+.5f*ddy).r) - pos;
 	vec3 N = normalize(cross(xtan, ytan));
 	vec3 L = normalize(light_pos - pos);
 	vec3 H = normalize(L + normalize(EYE - pos));
-	float D = max(0.0, dot(N, L));
-	float S = ( D > 0.0f ) ? pow(max(0., dot(H, N)), 16.) : 0.;
+	float D = max(0.0f, dot(N, L));
+	float S = ( D > 0.0f ) ? pow(max(0.f, dot(H, N)), 32.f) : 0.f;
 	vec3 lvec = light_pos - pos;
 	vec3 color = ambient + (D * base_color + S * light_color * base_color) * light_str / dot(lvec, lvec);
-	out_color = vec4(pow(color, vec3(1.0f/2.2f)), 1.0);
+	out_color = vec4(pow(color, vec3(1.0f/2.2f)), 1.0f);
 #endif
 #ifdef NORMAL
 	vec3 pos = getPos(uv.xy, z);
-	vec3 xv  = getPos(uv.xy+ddx, texture(dbuf, suv+.5*ddx).r) - pos;
-	vec3 yv  = getPos(uv.xy+ddy, texture(dbuf, suv+.5*ddy).r) - pos;
+	vec3 xv  = getPos(uv.xy+ddx, texture(dbuf, suv+.5f*ddx).r) - pos;
+	vec3 yv  = getPos(uv.xy+ddy, texture(dbuf, suv+.5f*ddy).r) - pos;
 	vec3 N = normalize(cross(xv, yv));
-	out_color = vec4(N, 1.0);
+	out_color = vec4(N, 1.0f);
 #endif
 #ifdef DEPTH
-	out_color = vec4(vec3(1. - texture(dbuf, suv).r), 1.0);
+	out_color = vec4(vec3(1.f - texture(dbuf, suv).r), 1.0f);
 #endif
 #ifdef DISCARD
-	out_color = vec4(0.0, 1.0, 0.0, 1.0);
-	if(z >= 1.) out_color = vec4(1.0, 0.0, 0.0, 1.0);
+	out_color = vec4(0.0f, 1.0f, 0.0f, 1.0f);
+	if(z >= 1.) out_color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 #endif
 }

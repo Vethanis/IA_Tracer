@@ -8,11 +8,11 @@ ifeq ($(OS), Windows_NT)
 	LDLIBS = .\glfw3.dll -lglew32 -lopengl32
 else 
 	ifeq ($(shell uname), Linux)
-		CXX = g++
+		CXX = clang++
 		INC_DIRS = -I/usr/include
-		CXXFLAGS = $(INC_DIRS) -std=c++11 -Wfatal-errors -Wall -fopenmp
+		CXXFLAGS = $(INC_DIRS) -std=c++11 -Wfatal-errors -Wall #-fopenmp
 		LDFLAGS = -L/usr/lib
-		LDLIBS = -lGLEW -lGL -lglfw -fopenmp
+		LDLIBS = -lGLEW -lGL -lglfw #-fopenmp
 	endif
 endif
 
@@ -34,7 +34,7 @@ release: CXXFLAGS += -O2
 release: $(EXE)
 
 run:	$(EXE)
-	./$(EXE) 1280 720
+	./$(EXE) 1024 1024
 
 clean:
 	rm *.o $(EXE)

@@ -199,17 +199,17 @@ vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
 }
 
 vec2 l_scene(vec2 a, vec2 b, vec2 c){
-	a = itri(a, 5.0f); b = itri(b, 4.0f); c = itri(c, 3.0f);
+	a = itri(a, 5.0f); b = itri(b, 7.0f); c = itri(c, 10.0f);
 	return ismoothmin(
-		isphere(a, b, c, vec3(1.0f), 1.0f),
-		icube(a, b, c, 1.0f),
-		1.0f);
+		itorus(a, b, c, vec2(1.0f, 0.5f)),
+		icube(a, b, c, 0.3f),
+		0.5f);
 }
 
 vec2 map(vec3 a, vec3 b){
 	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
-	return l_scene(c, d, e);
-	//return paniq_scene(c, d, e);
+	//return l_scene(c, d, e);
+	return paniq_scene(c, d, e);
 	//return isphere(c, d, e, vec3(0.f), 1.f);
 	//return icube(c, d, e, 0.5f);
 }
@@ -311,7 +311,7 @@ void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 
 vec2 subdivide(vec2 t, ivec2 cr, float e){
 	vec2 u, v;
-	for(int j = 5; j < MAX_DEPTH; j++){
+	for(int j = 0; j < MAX_DEPTH; j++){
 		t.y = 1.0f;
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
@@ -329,11 +329,11 @@ void main(){
 	if (pix.x >= size.x || pix.y >= size.y) return;
 #ifdef UNIFORM
 	vec2 uv = (vec2(pix) / vec2(size)) * 2.0f - 1.0f;
-	vec2 F = trace2(uv, vec2(0.0f, 1.0f), 0.00001f);
+	vec2 F = trace2(uv, vec2(0.0f, 1.0f), 0.000005f);
 	if(F.y >= 1.0f) return;
 	imageStore(dbuf, pix, vec4(center(F)));
 #else
-	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.00005f);
+	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.005f);
 	if(F.y >= 1.0f) return;
 	imageStore(dbuf, pix, vec4(center(F)));
 #endif
