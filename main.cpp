@@ -37,7 +37,7 @@ ivec4 whnp; // width, height, num_prims, max_depth
 				md++;
 			}
 			printf("%i\n", md);
-			whnp.z = md;
+			whnp.w = md;
 		};
 	void update(Camera& cam){
 		IVP = cam.getIVP();
