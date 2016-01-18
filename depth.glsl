@@ -189,9 +189,9 @@ float maxabs(vec2 a){
 }
 
 vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
-	vec2 d = itri(a, 4.0f);
-	vec2 e = itri(b, 4.0f);
-	vec2 f = itri(c, 4.0f);
+	vec2 d = itri(a, 40.0f);
+	vec2 e = itri(b, 40.0f);
+	vec2 f = itri(c, 40.0f);
 	return imin(
 		itorus(d, e, f, vec2(1.0f, 0.2f)),
 		icube(d, e, f, 0.5f)
@@ -209,6 +209,33 @@ vec3 getPos(vec2 uv, float z){
 	vec4 t = vec4(uv, z, 1.f);
 	t = IVP * t;
 	return vec3(t / t.w);
+}
+
+vec2 trace(vec3 rd, vec2 t, float e){
+	const int sz = 16;
+	vec2 stack[sz];
+	int end = 0;
+	stack[end] = ifar(t);
+	end++;
+	stack[end] = inear(t);
+	int entries = 2;
+	for(int i = 0; i < 60; i++){
+		vec2 cur = stack[end];
+		end--; if(end < 0) end = sz-1;
+		entries--;
+		vec2 F = map(EYE+rd*cur.x, EYE+rd*cur.y);
+		if(contains(F, 0.0f)){
+			if(width(cur) < e) return cur;
+			end = (end+1) % sz;
+			stack[end] = ifar(cur);	 // push
+			end = (end+1) % sz;
+			stack[end] = inear(cur); // push
+			entries += 2;
+			continue;
+		}
+		if(entries <= 0) break;
+	}
+	return vec2(FAR);
 }
 
 void toInterval(vec2 u, vec2 v, vec2 t, inout vec3 l, inout vec3 h){
@@ -276,22 +303,34 @@ void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 
 vec2 subdivide(vec2 t, ivec2 cr, float e){
 	vec2 u, v;
-	for(int j = 0; j < MAX_DEPTH; j++){
+	int start = MAX_DEPTH/2;
+	e = e / pow(2., start);
+	for(int j = start; j < MAX_DEPTH; j++){
 		t.y = 1.0f;
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
 		if(t.y >= 1.0f) return vec2(1.0f);
-		e = e * 0.5;
+		e = e * 0.5f;
 	}
 	return t;
 }
+
+//#define UNIFORM
 
 void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
+#ifdef UNIFORM
+	vec2 uv = (vec2(pix) / vec2(size)) * 2.0f - 1.0f;
+	vec3 rd = normalize(getPos(uv, 1.0f) - EYE);
+	vec2 F = trace(rd, vec2(NEAR, FAR), 0.0001f);
+	if(F.y >= FAR) return;
+	imageStore(dbuf, pix, vec4(toExp(center(F))));
+#else
 	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.001f);
 	if(F.y >= 1.0f) return;
 	imageStore(dbuf, pix, vec4(center(F)));
+#endif
 }
 

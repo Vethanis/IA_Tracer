@@ -2,7 +2,6 @@
 #define GLSCREEN_H
 
 #include "string.h"
-#include "ival.h"
 
 class GLScreen{
 	unsigned vao, vbo;

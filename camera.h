@@ -22,7 +22,7 @@ class Camera{
 	glm::vec3 m_eye, m_at;
 	float m_fov, m_whratio, m_near, m_far, m_yaw, m_pitch;
 public:
-    Camera(float fov=45.0f, float ratio=16.0f/9.0f, float near=0.1f, 
+    Camera(float fov=glm::radians(60.0f), float ratio=16.0f/9.0f, float near=0.1f, 
     	float far=10.0f, const glm::vec3& eye=glm::vec3(0.0f), 
     	const glm::vec3& at=glm::vec3(0.0f, 0.0f, -1.0f)) 
     	: m_eye(eye), m_at(at), m_fov(fov), m_whratio(ratio), m_near(near), m_far(far){
@@ -44,7 +44,7 @@ public:
 		P = glm::perspective(m_fov, m_whratio, m_near, m_far);
 	}
 	inline void setFov(float fov){
-		m_fov = fov;
+		m_fov = glm::radians(fov);
 		P = glm::perspective(m_fov, m_whratio, m_near, m_far);
 	}
 	inline const glm::vec3& getEye(){return m_eye;}
