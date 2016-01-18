@@ -198,8 +198,17 @@ vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
 		);
 }
 
+vec2 l_scene(vec2 a, vec2 b, vec2 c){
+	a = itri(a, 5.0f); b = itri(b, 4.0f); c = itri(c, 3.0f);
+	return ismoothmin(
+		isphere(a, b, c, vec3(1.0f), 1.0f),
+		icube(a, b, c, 1.0f),
+		1.0f);
+}
+
 vec2 map(vec3 a, vec3 b){
 	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
+	//return l_scene(c, d, e);
 	return paniq_scene(c, d, e);
 	//return isphere(c, d, e, vec3(0.f), 1.f);
 	//return icube(c, d, e, 0.5f);
@@ -219,18 +228,18 @@ vec2 trace(vec3 rd, vec2 t, float e){
 	end++;
 	stack[end] = inear(t);
 	int entries = 2;
-	for(int i = 0; i < 60; i++){
+	for(int i = 0; i < 300; i++){
 		vec2 cur = stack[end];
 		end--; if(end < 0) end = sz-1;
 		entries--;
 		vec2 F = map(EYE+rd*cur.x, EYE+rd*cur.y);
 		if(contains(F, 0.0f)){
-			if(width(cur) < e) return cur;
+			if(maxabs(F) < e) return cur;
 			end = (end+1) % sz;
 			stack[end] = ifar(cur);	 // push
 			end = (end+1) % sz;
 			stack[end] = inear(cur); // push
-			entries += 2;
+			entries = min(entries+2, sz);
 			continue;
 		}
 		if(entries <= 0) break;
@@ -259,14 +268,14 @@ void toInterval(vec2 u, vec2 v, vec2 t, inout vec3 l, inout vec3 h){
 }
 
 vec2 strace(vec2 u, vec2 v, vec2 t, float e){
-	const int sz = 8;
+	const int sz = 16;
 	vec2 stack[sz];
 	int end = 0;
 	stack[end] = ifar(t);
 	end++;
 	stack[end] = inear(t);
 	int entries = 2;
-	for(int i = 0; i < 60; i++){
+	for(int i = 0; i < 300; i++){
 		vec2 cur = stack[end];	// pop
 		end--; if(end < 0) end = sz-1;
 		entries--;
@@ -274,8 +283,7 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 		toInterval(u, v, cur, l, h);
 		vec2 F = map(l, h);
 		if(contains(F, 0.0f)){
-			if(width(cur) < e)
-				return cur;
+			if(width(cur) < e) return cur;
 			end = (end+1) % sz;
 			stack[end] = ifar(cur);	 // push
 			end = (end+1) % sz;
@@ -303,9 +311,7 @@ void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 
 vec2 subdivide(vec2 t, ivec2 cr, float e){
 	vec2 u, v;
-	int start = MAX_DEPTH/2;
-	e = e / pow(2., start);
-	for(int j = start; j < MAX_DEPTH; j++){
+	for(int j = 5; j < MAX_DEPTH; j++){
 		t.y = 1.0f;
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
@@ -315,7 +321,7 @@ vec2 subdivide(vec2 t, ivec2 cr, float e){
 	return t;
 }
 
-//#define UNIFORM
+#define UNIFORM
 
 void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
@@ -328,7 +334,7 @@ void main(){
 	if(F.y >= FAR) return;
 	imageStore(dbuf, pix, vec4(toExp(center(F))));
 #else
-	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.001f);
+	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.00005f);
 	if(F.y >= 1.0f) return;
 	imageStore(dbuf, pix, vec4(center(F)));
 #endif

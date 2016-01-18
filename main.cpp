@@ -10,6 +10,7 @@
 #include "compute_shader.h"
 #include "SSBO.h"
 #include "UBO.h"
+#include "timer.h"
 
 //#include "test.h"
 
@@ -31,7 +32,7 @@ ivec4 whnp; // width, height, num_prims, max_depth
 		nfp(vec4(cam.getNear(), cam.getFar(), 0.0f, 0.0f)),
 		whnp(ivec4(width, height, nprims, 0)){
 			int md = 0;
-			int w = width;
+			int w = glm::min(width, height);
 			while(w > 0){
 				w = w >> 1;
 				md++;
@@ -122,12 +123,14 @@ int main(int argc, char* argv[]){
 	
     vec3 light_pos(5.0f, 5.0f, 5.0f);
     colorProg.bind();
-	colorProg.setUniform("ambient", vec3(0.001f, 0.0005f, 0.0005f));
+	colorProg.setUniform("ambient", vec3(0.0001f, 0.00005f, 0.00005f));
 	colorProg.setUniform("light_color", vec3(1.0f));
 	colorProg.setUniform("light_pos", light_pos);
 	colorProg.setUniform("ddx", ddx);
 	colorProg.setUniform("ddy", ddy);
 	colorProg.setUniformFloat("light_str", 100.0f);
+	
+	Timer timer;
 	
 	input.poll();
     unsigned i = 0;
@@ -139,7 +142,10 @@ int main(int argc, char* argv[]){
 		
 		depthProg.bind();
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		timer.begin();
 		depthProg.call(callsizeX, callsizeY, 1);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		timer.endPrint();
 		
 		//test(camera, dbuf, ivec2(WIDTH, HEIGHT));
 		
