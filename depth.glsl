@@ -189,9 +189,9 @@ float maxabs(vec2 a){
 }
 
 vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
-	vec2 d = itri(a, 40.0f);
-	vec2 e = itri(b, 40.0f);
-	vec2 f = itri(c, 40.0f);
+	vec2 d = itri(a, 4.0f);
+	vec2 e = itri(b, 4.0f);
+	vec2 f = itri(c, 4.0f);
 	return imin(
 		itorus(d, e, f, vec2(1.0f, 0.2f)),
 		icube(d, e, f, 0.5f)
@@ -232,7 +232,6 @@ void toInterval(vec2 u, vec2 v, vec2 t, inout vec3 l, inout vec3 h){
 }
 
 vec2 strace(vec2 u, vec2 v, vec2 t, float e){
-	t.y = 1.0f;
 	const int sz = 8;
 	vec2 stack[sz];
 	int end = 0;
@@ -278,6 +277,7 @@ void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 vec2 subdivide(vec2 t, ivec2 cr, float e){
 	vec2 u, v;
 	for(int j = 0; j < MAX_DEPTH; j++){
+		t.y = 1.0f;
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
 		if(t.y >= 1.0f) return vec2(1.0f);
