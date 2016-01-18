@@ -31,7 +31,7 @@ vec3 getPos(vec2 uv, float z){
 	return vec3(t / t.w);
 }
 
-#define NORMAL
+#define COLOR
 
 void main(){
 	vec2 suv = uv * 0.5 + 0.5;
@@ -41,8 +41,7 @@ void main(){
 #endif
 #ifdef COLOR
 	float mat = texture(dbuf, suv).g;
-	vec3 base_color;
-	base_color = mix(vec3(0.0f, 1.0f, 0.0f), vec3(1.0f, 0.0f, 0.0f), mat);
+	vec3 base_color = vec3(0.1f, 0.3f, 0.7f);
 	vec3 pos   = getPos(uv.xy, z);
 	vec3 xtan  = getPos(uv.xy+ddx, texture(dbuf, suv+.5*ddx).r) - pos;
 	vec3 ytan  = getPos(uv.xy+ddy, texture(dbuf, suv+.5*ddy).r) - pos;
@@ -52,7 +51,7 @@ void main(){
 	float D = max(0.0, dot(N, L));
 	float S = ( D > 0.0f ) ? pow(max(0., dot(H, N)), 16.) : 0.;
 	vec3 lvec = light_pos - pos;
-	vec3 color = ambient + (D * base_color + S * light_color * base_color) * light_str / (0.1*dot(lvec, lvec));
+	vec3 color = ambient + (D * base_color + S * light_color * base_color) * light_str / dot(lvec, lvec);
 	out_color = vec4(pow(color, vec3(1.0f/2.2f)), 1.0);
 #endif
 #ifdef NORMAL

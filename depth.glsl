@@ -238,40 +238,43 @@ void toInterval(vec2 u, vec2 v, vec2 t, inout vec3 l, inout vec3 h){
 }
 
 vec2 strace(vec2 u, vec2 v, vec2 t, float e){
+	const int sz = 8;
+	vec2 stack[sz];
+	int end = 0;
+	stack[end] = ifar(t);
+	end++;
+	stack[end] = inear(t);
+	int entries = 2;
 	for(int i = 0; i < 60; i++){
-		vec2 cur = inear(t);
+		vec2 cur = stack[end];	// pop
+		end--; if(end < 0) end = sz-1;
+		entries--;
 		vec3 l, h;
-		toInterval(u, v, t, l, h);
+		toInterval(u, v, cur, l, h);
 		vec2 F = map(l, h);
 		if(contains(F, 0.0f)){
 			if(maxabs(F) < e)
 				return cur;
-			t = cur;
-			continue;
-		}		
-		cur = ifar(t);
-		toInterval(u, v, t, l, h);
-		F = map(l, h);
-		if(contains(F, 0.0f)){
-			if(maxabs(F) < e)
-				return cur;
-			t = cur;
+			end = (end+1) % sz;
+			stack[end] = ifar(cur);	//push
+			end = (end+1) % sz;
+			stack[end] = inear(cur); //push
+			entries += 2;
 			continue;
 		}
-		t = ipop(t);
-		if(t.y > 1.) break;
+		if(entries <= 0) break;
 	}
 	return vec2(1.);
 }
 
 void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
-	int dim = (depth == 0) ? 1 : int(pow(2, depth));
-	int w = WIDTH / dim; // [WIDTH, log2(WIDTH]
+	int dim = (depth == 0) ? 1 : int(pow(2, depth)); 
+	int w = WIDTH / dim; 
 	int h = HEIGHT / dim;
-	int c = cr.x / w;
+	int c = cr.x / w; 
 	int r = cr.y / h;
 	float dif = 2.0 / dim; 
-	u.x = -1.0 + c*dif; 
+	u.x = -1.0 + c*dif;  
 	u.y = -1.0 + c*dif + dif;
 	v.x = -1.0 + r*dif;
 	v.y = -1.0 + r*dif + dif;
@@ -284,6 +287,7 @@ vec2 subdivide(vec2 t, ivec2 cr, float e){
 		t = strace(u, v, t, e);
 		if(t.y >= 1.) return vec2(1.);
 		e = e * 0.5;
+		t = iclamp(iwiden(t, 1.0f / (j+4)));
 	}
 	return t;
 }
@@ -292,7 +296,7 @@ void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
-	vec2 F = subdivide(vec2(0., 1.), pix, 100.f);
+	vec2 F = subdivide(vec2(0., 1.), pix, 10.f);
 	if(F.y >= 1.) return;
 	imageStore(dbuf, pix, vec4(toExp(toNF(center(F)))));
 }
