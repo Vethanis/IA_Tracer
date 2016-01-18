@@ -185,34 +185,34 @@ vec2 ifar(vec2 a){
 }
 vec2 ipop(vec2 a){
 	float dd = center(a);
-	return vec2(a.x+dd, a.y+2.*dd);
+	return vec2(a.x+dd, a.y+2.0f*dd);
 }
 float maxabs(vec2 a){
 	return max(abs(a.x), abs(a.y));
 }
 vec2 iclamp(vec2 t){
-	return vec2(max(0.0f, t.x), min(1.0f, t.y));
+	return vec2(max(NEAR, t.x), min(FAR, t.y));
 }
 
 vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
-	vec2 d = itri(a, 40.0);
-	vec2 e = itri(b, 40.0);
-	vec2 f = itri(c, 40.0);
+	vec2 d = itri(a, 40.0f);
+	vec2 e = itri(b, 40.0f);
+	vec2 f = itri(c, 40.0f);
 	return imin(
-		itorus(d, e, f, vec2(1.0, 0.2)),
-		icube(d, e, f, 0.5)
+		itorus(d, e, f, vec2(1.0f, 0.2f)),
+		icube(d, e, f, 0.5f)
 		);
 }
 
 vec2 map(vec3 a, vec3 b){
 	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
-	//return paniq_scene(c, d, e);
-	return isphere(c, d, e, vec3(0.), 1.);
+	return paniq_scene(c, d, e);
+	//return isphere(c, d, e, vec3(0.f), 1.f);
 	//return icube(c, d, e, 0.5f);
 }
 
 vec3 getPos(vec2 uv, float z){
-	vec4 t = vec4(uv, toExp(toNF(z)), 1.);
+	vec4 t = vec4(uv, toExp(z), 1.f);
 	t = IVP * t;
 	return vec3(t / t.w);
 }
@@ -238,7 +238,8 @@ void toInterval(vec2 u, vec2 v, vec2 t, inout vec3 l, inout vec3 h){
 }
 
 vec2 strace(vec2 u, vec2 v, vec2 t, float e){
-	const int sz = 8;
+	t.y = FAR;
+	const int sz = 16;
 	vec2 stack[sz];
 	int end = 0;
 	stack[end] = ifar(t);
@@ -253,18 +254,18 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 		toInterval(u, v, cur, l, h);
 		vec2 F = map(l, h);
 		if(contains(F, 0.0f)){
-			if(maxabs(F) < e)
+			if(width(cur) < e)
 				return cur;
 			end = (end+1) % sz;
-			stack[end] = ifar(cur);	//push
+			stack[end] = ifar(cur);	 // push
 			end = (end+1) % sz;
-			stack[end] = inear(cur); //push
+			stack[end] = inear(cur); // push
 			entries += 2;
 			continue;
 		}
 		if(entries <= 0) break;
 	}
-	return vec2(1.);
+	return vec2(FAR);
 }
 
 void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
@@ -285,9 +286,8 @@ vec2 subdivide(vec2 t, ivec2 cr, float e){
 	for(int j = 0; j < MAX_DEPTH; j++){
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
-		if(t.y >= 1.) return vec2(1.);
-		e = e * 0.5;
-		t = iclamp(iwiden(t, 1.0f / (j+4)));
+		if(t.y >= FAR) return vec2(FAR);
+		e = e * 0.25;
 	}
 	return t;
 }
@@ -296,7 +296,8 @@ void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
-	vec2 F = subdivide(vec2(0., 1.), pix, 10.f);
-	if(F.y >= 1.) return;
-	imageStore(dbuf, pix, vec4(toExp(toNF(center(F)))));
+	vec2 F = subdivide(vec2(NEAR, FAR), pix, 10.0f);
+	if(F.y >= FAR) return;
+	imageStore(dbuf, pix, vec4(toExp(center(F))));
 }
+
