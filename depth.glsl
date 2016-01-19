@@ -298,15 +298,12 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 
 void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 	int dim = (depth == 0) ? 1 : int(pow(2, depth)); 
-	int w = WIDTH / dim; 
-	int h = HEIGHT / dim;
-	int c = cr.x / w; 
-	int r = cr.y / h;
+	cr = cr * dim / ivec2(WIDTH, HEIGHT);
 	float dif = 2.0 / dim; 
-	u.x = -1.0 + c*dif;  
-	u.y = -1.0 + c*dif + dif;
-	v.x = -1.0 + r*dif;
-	v.y = -1.0 + r*dif + dif;
+	u.x = -1.0 + cr.x*dif;  
+	u.y = -1.0 + cr.x*dif + dif;
+	v.x = -1.0 + cr.y*dif;
+	v.y = -1.0 + cr.y*dif + dif;
 }
 
 vec2 subdivide(vec2 t, ivec2 cr, float e){
@@ -315,13 +312,13 @@ vec2 subdivide(vec2 t, ivec2 cr, float e){
 		t.y = 1.0f;
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
-		if(t.y >= 1.0f) return vec2(1.0f);
+		if(center(t) >= 1.0f) return vec2(1.0f);
 		e = e * 0.5f;
 	}
 	return t;
 }
 
-#define UNIFORM
+//#define UNIFORM
 
 void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
