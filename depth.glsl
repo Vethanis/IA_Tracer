@@ -199,11 +199,11 @@ vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
 }
 
 vec2 l_scene(vec2 a, vec2 b, vec2 c){
-	a = itri(a, 5.0f); b = itri(b, 7.0f); c = itri(c, 10.0f);
+	a = itri(a, 3.0f); b = itri(b, 4.0f); c = itri(c, 5.0f);
 	return ismoothmin(
-		itorus(a, b, c, vec2(1.0f, 0.5f)),
-		icube(a, b, c, 0.3f),
-		0.5f);
+		isphere(a, b, c, vec3(1.0f), 1.0f),
+		icube(a, b, c, 1.0f),
+		1.0f);
 }
 
 vec2 map(vec3 a, vec3 b){

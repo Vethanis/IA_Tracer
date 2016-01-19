@@ -58,7 +58,7 @@ void main(){
 	vec3 pos = getPos(uv.xy, z);
 	vec3 xv  = getPos(uv.xy+ddx, texture(dbuf, suv+.5f*ddx).r) - pos;
 	vec3 yv  = getPos(uv.xy+ddy, texture(dbuf, suv+.5f*ddy).r) - pos;
-	vec3 N = normalize(cross(xv, yv));
+	vec3 N = 0.5f*normalize(cross(xv, yv)) + 0.5f;
 	out_color = vec4(N, 1.0f);
 #endif
 #ifdef DEPTH

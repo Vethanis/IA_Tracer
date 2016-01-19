@@ -143,7 +143,10 @@ int main(int argc, char* argv[]){
 		
 		depthProg.bind();
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		timer.begin();
 		depthProg.call(callsizeX, callsizeY, 1);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		timer.endPrint();
 		
 		//test(camera, dbuf, ivec2(WIDTH, HEIGHT));
 		
