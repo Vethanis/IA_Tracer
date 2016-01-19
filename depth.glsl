@@ -288,7 +288,7 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 			stack[end] = ifar(cur);	 // push
 			end = (end+1) % sz;
 			stack[end] = inear(cur); // push
-			entries += 2;
+			entries = min(entries+2, sz);
 			continue;
 		}
 		if(entries <= 0) break;
