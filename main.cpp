@@ -12,7 +12,7 @@
 #include "UBO.h"
 #include "timer.h"
 
-//#include "test.h"
+#include "test.h"
 
 #include <random>
 #include "time.h"
@@ -148,7 +148,7 @@ int main(int argc, char* argv[]){
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		timer.endPrint();
 		
-		//test(camera, dbuf, ivec2(WIDTH, HEIGHT));
+		test(camera, dbuf, ivec2(WIDTH, HEIGHT));
 		
 		colorProg.bind();
 		if(glfwGetKey(window.getWindow(), GLFW_KEY_E))

@@ -25,17 +25,6 @@ layout(std140, binding=2) uniform CamBlock
 float sHFOV = sin(FOV*0.5f);
 float sVFOV = sin(FOV / (AR*2.0f));
 
-const float invNear = 1.0f/NEAR;
-const float invFar = 1.0f/FAR;
-const float invfmn = invFar - invNear;
-const float expd = 1.0f / invfmn;
-float toExp(float z){
-	return (1.0f/z - invNear) * expd;
-}
-float toLin(float f){
-	return 1.0f / (f * invfmn + invNear);
-}
-
 uniform vec3 ambient;
 uniform vec3 light_color;
 uniform vec3 light_pos;
@@ -48,7 +37,6 @@ uniform float light_str;
 out vec4 out_color;
 
 vec3 getPos(vec2 uv, float z){
-	z = toLin(z);
 	uv.x *= z * sHFOV;
 	uv.y *= z * sVFOV;
 	vec4 t = vec4(uv, z, 1.0f);
@@ -62,7 +50,7 @@ void main(){
 	vec2 suv = uv * 0.5f + 0.5f;
 	float z = texture(dbuf, suv).r;
 #ifndef DISCARD
-	if(z >= 1.0f) discard;
+	if(z >= FAR) discard;
 #endif
 #ifdef COLOR
 	float mat = texture(dbuf, suv).g;

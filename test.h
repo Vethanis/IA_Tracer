@@ -3,7 +3,6 @@
 
 #include "camera.h"
 #include "texture.h"
-#include "omp.h"
 #include "debugmacro.h"
 
 using namespace glm;
@@ -63,15 +62,6 @@ float imin(vec3 a){
 }
 float imax(vec3 a){
 	return max(max(a.x, a.y), a.z);
-}
-vec2 ix(vec3 a, vec3 b){
-	return vec2(min(a.x, b.x), max(a.x, b.x));
-}
-vec2 iy(vec3 a, vec3 b){
-	return vec2(min(a.y, b.y), max(a.y, b.y));
-}
-vec2 iz(vec3 a, vec3 b){
-	return vec2(min(a.z, b.z), max(a.z, b.z));
 }
 vec2 iabs(vec2 a){
   if (a.x >= 0.0f)
@@ -162,6 +152,15 @@ vec2 inear(vec2 a){
 vec2 ifar(vec2 a){
 	return vec2(center(a), a.y);
 }
+vec2 ix(const vec3& a, const vec3& b){
+	return vec2(min(a.x, b.x), max(a.x, b.x));
+}
+vec2 iy(const vec3& a, const vec3& b){
+	return vec2(min(a.y, b.y), max(a.y, b.y));
+}
+vec2 iz(const vec3& a, const vec3& b){
+	return vec2(min(a.z, b.z), max(a.z, b.z));
+}
 vec2 ipop(vec2 a){
 	float dd = center(a);
 	return vec2(a.x+dd, a.y+2.0f*dd);
@@ -187,114 +186,81 @@ float toLin(Camera& cam, float f){
 	return 1.0f / (f * (1.f/FAR - 1.f/NEAR) + (1.f/NEAR));
 }
 
-vec2 map(vec3 a, vec3 b){
-	vec2 c = vec2(a.x, b.x);
-	vec2 d = vec2(a.y, b.y);
-	vec2 e = vec2(a.z, b.z);
-	//return paniq_scene(c, d, e);
-	return isphere(c, d, e, vec3(0.f), 1.f);
-}
-
-vec3 getPos(Camera& cam, vec2 uv, float z){
-	z = NEAR + z * (FAR - NEAR);
-	z = toExp(cam, z);
-	vec4 t = vec4(uv, z, 1.f);
-	t = cam.getIVP() * t;
-	return vec3(t / t.w);
+vec3 toWorld(Camera& cam, const vec3& a){
+	vec4 t(a, 1.0f);
+	t = cam.getIV() * t;
+	return vec3(t);
 }
 
 void toInterval(Camera& cam, vec2 u, vec2 v, vec2 t, vec3& l, vec3& h){
-	vec3 d = getPos(cam, vec2(u.x, v.x), t.x);
-	{
-		vec3 e = getPos(cam, vec2(u.x, v.x), t.y);
-		l = imin(d, e); h = imax(d, e);
-	}
-	d = getPos(cam, vec2(u.x, v.y), t.x);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(cam, vec2(u.x, v.y), t.y);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(cam, vec2(u.y, v.x), t.x);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(cam, vec2(u.y, v.x), t.y);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(cam, vec2(u.y, v.y), t.x);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(cam, vec2(u.y, v.y), t.y);
-	l = imin(l, d); h = imax(h, d);
+	float fx = t.y*sin(cam.getFov()*0.5f);
+	l = toWorld(cam, vec3(u.x*fx, v.x*fx, -t.x));
+	h = toWorld(cam, vec3(u.y*fx, v.y*fx, -t.y));
+}
+
+vec2 map(Camera& cam, vec2 u, vec2 v, vec2 t){
+	vec3 a, b;
+	printf("UVT: \n");print(u); print(v); print(t);
+	toInterval(cam, u, v, t, a, b);
+	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
+	printf("xyz: \n");print(c); print(d); print(e);
+	return paniq_scene(c, d, e);
+	//return isphere(c, d, e, vec3(0.f), 1.f);
 }
 
 vec2 strace(Camera& cam, vec2 u, vec2 v, vec2 t, float e){
-	for(int i = 0; i < 60; i++){
-		//printf("i: %i\n", i);
-		vec2 cur = inear(t);
-		//printf("t: ", i);print(cur);
-		vec3 l, h;
-		toInterval(cam, u, v, t, l, h);
-		//printf("l: ");print(l);
-		//printf("h: ");print(h);
-		vec2 F = map(l, h);
-		//printf("F: ");print(F);
+	const int sz = 16;
+	vec2 stack[sz];
+	int end = 0;
+	stack[end] = t;
+	int entries = 1;
+	for(int i = 0; i < 300; i++){
+		vec2 cur = stack[end];
+		end--; if (end < 0) end = sz-1;
+		entries--;
+		vec2 F = map(cam, u, v, cur);
 		if(contains(F, 0.0f)){
-			if(width(cur) < e)
-				return cur;
-			t = cur;
-			continue;
-		}		
-		cur = ifar(t);
-		//printf("t: ", i);print(cur);
-		toInterval(cam, u, v, t, l, h);
-		//printf("l: ");print(l);
-		//printf("h: ");print(h);
-		F = map(l, h);
-		//printf("F: ");print(F);
-		if(contains(F, 0.0f)){
-			if(width(cur) < e)
-				return cur;
-			t = cur;
+			if(width(cur) < e*center(cur))return cur;
+			end = (end+1)%sz;
+			stack[end] = ifar(cur);
+			end = (end+1)%sz;
+			stack[end] = inear(cur);
+			entries = min(entries+2, sz);
 			continue;
 		}
-		t = ipop(t);
-		//printf("t: ", i);print(t);
-		if(t.y > 1.0f || t.x < 0.0f) break;
+		if(entries <= 0) break;
 	}
-	return vec2(1.0f);
+	return vec2(cam.getFar());
 }
 
 void getUVs(vec2& u, vec2& v, ivec2 cr, int depth){
 	int dim = (depth == 0) ? 1 : int(pow(2, depth));
-	int w = 1024 / (depth+1);
-	int h = 1024 / (depth+1);
-	int c = cr.x  / w;
-	int r = cr.y  / h;
+	cr = cr * dim / 1024;
 	float dif = 2.0f / dim;
-	u.x = -1.0f + c*dif;
-	u.y = -1.0f + c*dif + dif;
-	v.x = -1.0f + r*dif;
-	v.y = -1.0f + r*dif + dif;
+	u.x = -1.0f + cr.x*dif;
+	u.y = -1.0f + cr.x*dif + dif;
+	v.x = -1.0f + cr.y*dif;
+	v.y = -1.0f + cr.y*dif + dif;
 }
 
 vec2 subdivide(Camera& cam, vec2 t, ivec2 cr, float e){
 	vec2 u, v;
 	for(int j = 0; j < MAX_DEPTH; j++){
+		t.y = cam.getFar();
 		getUVs(u, v, cr, j);
-		if(j == 4){print(u);print(v);}
 		t = strace(cam, u, v, t, e);
-		if(t.y >= 1.f) return vec2(1.f);
+		if(t.y >= cam.getFar()) return vec2(cam.getFar());
 		e = e * 0.5f;
 	}
 	return t;
 }
 
 void test(Camera& cam, Texture& dbuf, ivec2 WH){
-	//#pragma omp parallel for
 	for(int i = 0; i < WH.x*WH.y; i++){
-		printf("id: %i\n", i);
 		ivec2 pix = ivec2(i%WH.x, i/WH.x);
-		vec2 F = subdivide(cam, vec2(0.f, 1.f), pix, 0.1f);
-		if(F.y >= 1.f) continue;
+		vec2 F = subdivide(cam, vec2(NEAR, FAR), pix, 0.5f);
+		if(F.y >= FAR) continue;
 		float f = center(F);
-		f = NEAR + f * (FAR - NEAR);
-		f = toExp(cam, f);
 		dbuf.setPixel(pix, f);
 	}
 }

@@ -8,5 +8,5 @@ void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
-	imageStore(dbuf, pix, vec4(1.0f, -1.0f, 0.0f, 0.0f));
+	imageStore(dbuf, pix, vec4(999999.0f, -1.0f, 0.0f, 0.0f));
 }

@@ -201,7 +201,7 @@ vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
 }
 
 vec2 l_scene(vec2 a, vec2 b, vec2 c){
-	a = itri(a, 6.0f); b = itri(b, 8.0f); c = itri(c, 10.0f);
+	a = itri(a, 3.0f); b = itri(b, 4.0f); c = itri(c, 5.0f);
 	return ismoothmin(
 		isphere(a, b, c, vec3(1.0f), 1.0f),
 		icube(a, b, c, 1.0f),
@@ -216,8 +216,6 @@ vec3 toWorld(vec3 a){
 
 // convert ndc to view coords
 void toInterval(vec2 u, vec2 v, vec2 t, out vec3 l, out vec3 h){
-	t.x = toLin(t.x);
-	t.y = toLin(t.y);
 	float fx = t.y * sHFOV;
 	float fy = t.y * sVFOV;
 	l = toWorld(vec3(fx*u.x, fy*v.x, -t.x));
@@ -238,17 +236,15 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 	const int sz = 16;
 	vec2 stack[sz];
 	int end = 0;
-	stack[end] = ifar(t);
-	end++;
-	stack[end] = inear(t);
-	int entries = 2;
+	stack[end] = t;
+	int entries = 1;
 	for(int i = 0; i < 300; i++){
 		vec2 cur = stack[end];	// pop
 		end--; if(end < 0) end = sz-1;
 		entries--;
 		vec2 F = map(u, v, cur);
 		if(contains(F, 0.0f)){
-			if(width(cur) < e) return cur;
+			if(width(cur) < e*center(cur)) return cur;
 			end = (end+1) % sz;
 			stack[end] = ifar(cur);	 // push
 			end = (end+1) % sz;
@@ -258,14 +254,14 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 		}
 		if(entries <= 0) break;
 	}
-	return vec2(1.0f);
+	return vec2(FAR);
 }
 
 void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 	int dim = (depth == 0) ? 1 : int(pow(2, depth)); 
 	cr = cr * dim / ivec2(WIDTH, HEIGHT);
 	float dif = 2.0 / dim; 
-	u.x = -1.0 + cr.x*dif;  
+	u.x = -1.0 + cr.x*dif; 
 	u.y = -1.0 + cr.x*dif + dif;
 	v.x = -1.0 + cr.y*dif;
 	v.y = -1.0 + cr.y*dif + dif;
@@ -274,10 +270,10 @@ void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 vec2 subdivide(vec2 t, ivec2 cr, float e){
 	vec2 u, v;
 	for(int j = 0; j < MAX_DEPTH; j++){
-		t.y = 1.0f;
+		t.y = FAR;
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
-		if(center(t) >= 1.0f) return vec2(1.0f);
+		if(center(t) >= FAR) return vec2(FAR);
 		e = e * 0.5f;
 	}
 	return t;
@@ -288,8 +284,8 @@ void main(){
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
 
-	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.01f);
-	if(F.y >= 1.0f) return;
+	vec2 F = subdivide(vec2(NEAR, FAR), pix, 0.5f);
+	if(F.y >= FAR) return;
 	imageStore(dbuf, pix, vec4(center(F)));
 }
 
