@@ -18,7 +18,7 @@ inline glm::vec3 getForward(const glm::mat4& m){
 }
 
 class Camera{
-	glm::mat4 P, V, IVP;
+	glm::mat4 P, V, IV;
 	glm::vec3 m_eye, m_at;
 	float m_fov, m_whratio, m_near, m_far, m_yaw, m_pitch;
 public:
@@ -37,7 +37,7 @@ public:
 		m_at.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
 		m_at += m_eye;
 		V = glm::lookAt(m_eye, m_at, up_vec);
-		IVP = glm::inverse(P * V);
+		IV = glm::inverse(V);
 	}
 	inline void resize(int width, int height){
 		m_whratio = (double)width / (double)height;
@@ -53,20 +53,6 @@ public:
 	inline float getFar()const{return m_far;}
 	inline float getFov()const{return m_fov;}
 	inline void setEye(const glm::vec3& eye){m_eye = eye;}
-	// returns world ray from canonical screen coords
-	inline glm::vec3 getRay(float x, float y)const{
-		glm::vec4 temp(x, y, 0.0f, 1.0f);
-		temp = IVP * temp;
-		temp = temp / temp.w;
-		return glm::normalize(glm::vec3(temp) - m_eye);
-	}
-	// returns world coords, xyz in ndc[-1, 1]
-	// 32 flops
-	inline glm::vec3 getPoint(float x, float y, float z)const{
-		glm::vec4 ndc(x, y, z, 1.0f);
-		ndc = IVP * ndc;
-		return glm::vec3(ndc / ndc.w);
-	}
 	inline void move(const glm::vec3& v){
 		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
 	}
@@ -83,11 +69,12 @@ public:
 	}
 	inline const glm::mat4& getV(){return V;}
 	inline const glm::mat4& getP(){return P;}
-	inline const glm::mat4& getIVP(){ return IVP;}
+	inline const glm::mat4& getIV(){ return IV;}
 	inline const glm::vec3 getAxis()const{ return normalize(m_at - m_eye);}
 	inline void setPlanes(float near, float far){
 		m_near = near; m_far = far;
 		P = glm::perspective(m_fov, m_whratio, m_near, m_far);
 	}
+	inline float getAR(){return m_whratio;}
 };
 #endif

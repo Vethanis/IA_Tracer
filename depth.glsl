@@ -6,9 +6,9 @@ layout(binding = 0, rg32f) uniform image2D dbuf;
 
 layout(std140, binding=2) uniform CamBlock
 {
-	mat4 IVP;
+	mat4 IV;
 	vec4 eye;
-	vec4 nfp;	// near, far
+	vec4 nfp;	// near, far, aspect_ratio, hfov
 	ivec4 whnp; // width, height, num_prims
 };
 
@@ -19,19 +19,21 @@ layout(std140, binding=2) uniform CamBlock
 #define WIDTH whnp.x
 #define HEIGHT whnp.y
 #define MAX_DEPTH whnp.w
+#define AR nfp.z
+#define FOV nfp.w
 
-float invNear = 1.0f/NEAR;
-float invFar = 1.0f/FAR;
-float invfmn = invFar - invNear;
-float expd = 1.0f / invfmn;
+float sHFOV = sin(FOV*0.5f);
+float sVFOV = sin(FOV / (AR*2.0f));
+
+const float invNear = 1.0f/NEAR;
+const float invFar = 1.0f/FAR;
+const float invfmn = invFar - invNear;
+const float expd = 1.0f / invfmn;
 float toExp(float z){
-	return (1./z - invNear) * expd;
+	return (1.0f/z - invNear) * expd;
 }
 float toLin(float f){
-	return 1.0 / (f * invfmn + invNear);
-}
-float toNF(float l){
-	return NEAR + l * (FAR - NEAR);
+	return 1.0f / (f * invfmn + invNear);
 }
 
 vec2 iadd(vec2 a, vec2 b){return a + b;}
@@ -199,72 +201,37 @@ vec2 paniq_scene(vec2 a, vec2 b, vec2 c){
 }
 
 vec2 l_scene(vec2 a, vec2 b, vec2 c){
-	a = itri(a, 3.0f); b = itri(b, 4.0f); c = itri(c, 5.0f);
+	a = itri(a, 6.0f); b = itri(b, 8.0f); c = itri(c, 10.0f);
 	return ismoothmin(
 		isphere(a, b, c, vec3(1.0f), 1.0f),
 		icube(a, b, c, 1.0f),
 		1.0f);
 }
 
-vec2 map(vec3 a, vec3 b){
+vec3 toWorld(vec3 a){
+	vec4 t = vec4(a, 1.0f);
+	t = IV * t;
+	return vec3(t);
+}
+
+// convert ndc to view coords
+void toInterval(vec2 u, vec2 v, vec2 t, out vec3 l, out vec3 h){
+	t.x = toLin(t.x);
+	t.y = toLin(t.y);
+	float fx = t.y * sHFOV;
+	float fy = t.y * sVFOV;
+	l = toWorld(vec3(fx*u.x, fy*v.x, -t.x));
+	h = toWorld(vec3(fx*u.y, fy*v.y, -t.y));
+}
+
+vec2 map(vec2 u, vec2 v, vec2 t){
+	vec3 a, b;
+	toInterval(u, v, t, a, b);
 	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
 	//return l_scene(c, d, e);
 	return paniq_scene(c, d, e);
 	//return isphere(c, d, e, vec3(0.f), 1.f);
 	//return icube(c, d, e, 0.5f);
-}
-
-vec3 getPos(vec2 uv, float z){
-	vec4 t = vec4(uv, z, 1.f);
-	t = IVP * t;
-	return vec3(t / t.w);
-}
-
-vec2 trace2(vec2 uv, vec2 t, float e){
-	const int sz = 16;
-	vec2 stack[sz];
-	int end = 0;
-	stack[end] = ifar(t);
-	end++;
-	stack[end] = inear(t);
-	int entries = 2;
-	for(int i = 0; i < 300; i++){
-		vec2 cur = stack[end];
-		end--; if(end < 0) end = sz-1;
-		entries--;
-		vec2 F = map(getPos(uv, cur.x), getPos(uv, cur.y));
-		if(contains(F, 0.0f)){
-			if(width(cur) < e) return cur;
-			end = (end+1) % sz;
-			stack[end] = ifar(cur);	 // push
-			end = (end+1) % sz;
-			stack[end] = inear(cur); // push
-			entries = min(entries+2, sz);
-			continue;
-		}
-		if(entries <= 0) break;
-	}
-	return vec2(1.0f);
-}
-
-void toInterval(vec2 u, vec2 v, vec2 t, inout vec3 l, inout vec3 h){
-	vec3 d = getPos(vec2(u.x, v.x), t.x);
-	{
-		vec3 e = getPos(vec2(u.x, v.x), t.y);
-		l = imin(d, e); h = imax(d, e);
-	}
-	d = getPos(vec2(u.x, v.y), t.x);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.x, v.y), t.y);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.y, v.x), t.x);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.y, v.x), t.y);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.y, v.y), t.x);
-	l = imin(l, d); h = imax(h, d);
-	d = getPos(vec2(u.y, v.y), t.y);
-	l = imin(l, d); h = imax(h, d);
 }
 
 vec2 strace(vec2 u, vec2 v, vec2 t, float e){
@@ -279,9 +246,7 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 		vec2 cur = stack[end];	// pop
 		end--; if(end < 0) end = sz-1;
 		entries--;
-		vec3 l, h;
-		toInterval(u, v, cur, l, h);
-		vec2 F = map(l, h);
+		vec2 F = map(u, v, cur);
 		if(contains(F, 0.0f)){
 			if(width(cur) < e) return cur;
 			end = (end+1) % sz;
@@ -318,21 +283,13 @@ vec2 subdivide(vec2 t, ivec2 cr, float e){
 	return t;
 }
 
-//#define UNIFORM
-
 void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
-#ifdef UNIFORM
-	vec2 uv = (vec2(pix) / vec2(size)) * 2.0f - 1.0f;
-	vec2 F = trace2(uv, vec2(0.0f, 1.0f), 0.000005f);
+
+	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.01f);
 	if(F.y >= 1.0f) return;
 	imageStore(dbuf, pix, vec4(center(F)));
-#else
-	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.005f);
-	if(F.y >= 1.0f) return;
-	imageStore(dbuf, pix, vec4(center(F)));
-#endif
 }
 

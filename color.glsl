@@ -6,13 +6,35 @@ uniform sampler2D dbuf;
 
 layout(std140, binding=2) uniform CamBlock
 {
-	mat4 IVP;
+	mat4 IV;
 	vec4 eye;
-	vec4 nfp;	// near, far
+	vec4 nfp;	// near, far, aspect_ratio, hfov
 	ivec4 whnp; // width, height, num_prims
 };
 
 #define EYE eye.xyz
+#define NEAR nfp.x
+#define FAR nfp.y
+#define NPRIMS whnp.z
+#define WIDTH whnp.x
+#define HEIGHT whnp.y
+#define MAX_DEPTH whnp.w
+#define AR nfp.z
+#define FOV nfp.w
+
+float sHFOV = sin(FOV*0.5f);
+float sVFOV = sin(FOV / (AR*2.0f));
+
+const float invNear = 1.0f/NEAR;
+const float invFar = 1.0f/FAR;
+const float invfmn = invFar - invNear;
+const float expd = 1.0f / invfmn;
+float toExp(float z){
+	return (1.0f/z - invNear) * expd;
+}
+float toLin(float f){
+	return 1.0f / (f * invfmn + invNear);
+}
 
 uniform vec3 ambient;
 uniform vec3 light_color;
@@ -26,9 +48,12 @@ uniform float light_str;
 out vec4 out_color;
 
 vec3 getPos(vec2 uv, float z){
-	vec4 t = vec4(uv, z, 1.f);
-	t = IVP * t;
-	return vec3(t / t.w);
+	z = toLin(z);
+	uv.x *= z * sHFOV;
+	uv.y *= z * sVFOV;
+	vec4 t = vec4(uv, z, 1.0f);
+	t = IV * t;
+	return vec3(t);
 }
 
 #define NORMAL
@@ -37,7 +62,7 @@ void main(){
 	vec2 suv = uv * 0.5f + 0.5f;
 	float z = texture(dbuf, suv).r;
 #ifndef DISCARD
-	if(z >= 1.f) discard;
+	if(z >= 1.0f) discard;
 #endif
 #ifdef COLOR
 	float mat = texture(dbuf, suv).g;
