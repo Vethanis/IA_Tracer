@@ -12,7 +12,7 @@
 #include "UBO.h"
 #include "timer.h"
 
-#include "test.h"
+//#include "test.h"
 
 #include <random>
 #include "time.h"
@@ -23,12 +23,12 @@ using namespace glm;
 #define NUM_PRIMS 200
 
 struct CommonParams{
-mat4 IV;
+mat4 IVP;
 vec4 eye;
 vec4 nfp;	// near, far
 ivec4 whnp; // width, height, num_prims, max_depth
 	CommonParams(Camera& cam, int width, int height, int nprims)
-		: IV(cam.getIV()), eye(vec4(cam.getEye(), 1.0f)),
+		: IVP(cam.getIVP()), eye(vec4(cam.getEye(), 1.0f)),
 		nfp(vec4(cam.getNear(), cam.getFar(), cam.getAR(), cam.getFov())),
 		whnp(ivec4(width, height, nprims, 0)){
 			int md = 0;
@@ -41,7 +41,7 @@ ivec4 whnp; // width, height, num_prims, max_depth
 			whnp.w = md;
 		};
 	void update(Camera& cam){
-		IV = cam.getIV();
+		IVP = cam.getIVP();
 		eye = vec4(cam.getEye(), 0.0f);
 	}
 };
@@ -88,11 +88,11 @@ int main(int argc, char* argv[]){
 	unsigned layoutSize = 8;
 	unsigned callsizeX = WIDTH / layoutSize + ((WIDTH % layoutSize) ? 1 : 0);
 	unsigned callsizeY = HEIGHT / layoutSize + ((HEIGHT % layoutSize) ? 1 : 0);
-	camera.setEye({0.0f, 0.0f, 2.0f});
-	//camera.setEye({0.0f, 2.f, -.5f});
-	//camera.pitch(-90.0f);
-	//camera.setFov(90.0f);
-	camera.setPlanes(0.1f, 100.0f);
+	//camera.setEye({0.0f, 0.0f, 2.0f});
+	camera.setEye({0.0f, 2.f, -.5f});
+	camera.pitch(-90.0f);
+	camera.setFov(90.0f);
+	camera.setPlanes(0.1f, 400.0f);
 	//camera.setPlanes(0.1f, 50.0f);
 	camera.resize(WIDTH, HEIGHT);
 	camera.update();

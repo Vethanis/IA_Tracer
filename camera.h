@@ -18,7 +18,7 @@ inline glm::vec3 getForward(const glm::mat4& m){
 }
 
 class Camera{
-	glm::mat4 P, V, IV;
+	glm::mat4 P, V, IVP;
 	glm::vec3 m_eye, m_at;
 	float m_fov, m_whratio, m_near, m_far, m_yaw, m_pitch;
 public:
@@ -37,7 +37,7 @@ public:
 		m_at.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
 		m_at += m_eye;
 		V = glm::lookAt(m_eye, m_at, up_vec);
-		IV = glm::inverse(V);
+		IVP = glm::inverse(P * V);
 	}
 	inline void resize(int width, int height){
 		m_whratio = (double)width / (double)height;
@@ -69,7 +69,7 @@ public:
 	}
 	inline const glm::mat4& getV(){return V;}
 	inline const glm::mat4& getP(){return P;}
-	inline const glm::mat4& getIV(){ return IV;}
+	inline const glm::mat4& getIVP(){ return IVP;}
 	inline const glm::vec3 getAxis()const{ return normalize(m_at - m_eye);}
 	inline void setPlanes(float near, float far){
 		m_near = near; m_far = far;

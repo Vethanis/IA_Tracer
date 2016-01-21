@@ -6,7 +6,7 @@ layout(binding = 0, rg32f) uniform image2D dbuf;
 
 layout(std140, binding=2) uniform CamBlock
 {
-	mat4 IV;
+	mat4 IVP;
 	vec4 eye;
 	vec4 nfp;	// near, far, aspect_ratio, hfov
 	ivec4 whnp; // width, height, num_prims
@@ -21,9 +21,6 @@ layout(std140, binding=2) uniform CamBlock
 #define MAX_DEPTH whnp.w
 #define AR nfp.z
 #define FOV nfp.w
-
-float sHFOV = sin(FOV*0.5f);
-float sVFOV = sin(FOV / (AR*2.0f));
 
 const float invNear = 1.0f/NEAR;
 const float invFar = 1.0f/FAR;
@@ -208,31 +205,33 @@ vec2 l_scene(vec2 a, vec2 b, vec2 c){
 		1.0f);
 }
 
-vec3 toWorld(vec3 a){
-	vec4 t = vec4(a, 1.0f);
-	t = IV * t;
-	return vec3(t);
+vec3 toWorld(vec3 uvt){
+	vec4 t = vec4(uvt, 1.0f);
+	t = IVP * t;
+	return vec3(t/t.w);
 }
 
-// convert ndc to view coords
-void toInterval(vec2 u, vec2 v, vec2 t, out vec3 l, out vec3 h){
-	float fx = t.y * sHFOV;
-	float fy = t.y * sVFOV;
-	l = toWorld(vec3(fx*u.x, fy*v.x, -t.x));
-	h = toWorld(vec3(fx*u.y, fy*v.y, -t.y));
+// convert ndc to interval in world coords
+void toInterval(vec2 u, vec2 v, vec2 t, out vec3 a, out vec3 b){
+	vec3 lo = toWorld(vec3(u.x, v.x, t.x));
+	vec3 hi = toWorld(vec3(u.y, v.y, t.y));
+	vec3 center = 0.5f*(lo+hi);
+	vec3 edge = imax(abs(hi - center), abs(lo - center));
+	a = center - edge;
+	b = center + edge;
 }
 
 vec2 map(vec2 u, vec2 v, vec2 t){
 	vec3 a, b;
 	toInterval(u, v, t, a, b);
-	//return l_scene(c, d, e);
+	//return l_scene(ix(a, b), iy(a, b), iz(a, b));
 	return paniq_scene(ix(a, b), iy(a, b), iz(a, b));
 	//return isphere(c, d, e, vec3(0.f), 1.f);
 	//return icube(c, d, e, 0.5f);
 }
 
 vec2 strace(vec2 u, vec2 v, vec2 t, float e){
-	const int sz = 8;
+	const int sz = 16;
 	vec2 stack[sz];
 	int end = 0;
 	stack[end] = t;
@@ -243,7 +242,7 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 		entries--;
 		vec2 F = map(u, v, cur);
 		if(contains(F, 0.0f)){
-			if(width(cur) < e*center(cur)) return cur;
+			if(width(cur) < e) return cur;
 			end = (end+1) % sz;
 			stack[end] = ifar(cur);	 // push
 			end = (end+1) % sz;
@@ -251,9 +250,9 @@ vec2 strace(vec2 u, vec2 v, vec2 t, float e){
 			entries = min(entries+2, sz);
 			continue;
 		}
-		if(entries <= 0) break;
+		if(entries < 1) break;
 	}
-	return vec2(FAR);
+	return vec2(1.0f);
 }
 
 void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
@@ -268,11 +267,13 @@ void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 
 vec2 subdivide(vec2 t, ivec2 cr, float e){
 	vec2 u, v;
-	for(int j = 0; j < MAX_DEPTH; j++){
-		t.y = FAR;
+	int start = 2*MAX_DEPTH / 3;
+	e = e / pow(2.0f, start);
+	for(int j = start; j < MAX_DEPTH; j++){
+		t.y = 1.0f;
 		getUVs(u, v, cr, j);
 		t = strace(u, v, t, e);
-		if(center(t) >= FAR) return vec2(FAR);
+		if(center(t) >= 1.0f) return vec2(1.0f);
 		e = e * 0.5f;
 	}
 	return t;
@@ -283,8 +284,8 @@ void main(){
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
 
-	vec2 F = subdivide(vec2(NEAR, FAR), pix, 0.5f);
-	if(F.y >= FAR) return;
+	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.001f);
+	if(F.y >= 1.0f) return;
 	imageStore(dbuf, pix, vec4(center(F)));
 }
 

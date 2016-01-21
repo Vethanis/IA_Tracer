@@ -6,7 +6,7 @@ uniform sampler2D dbuf;
 
 layout(std140, binding=2) uniform CamBlock
 {
-	mat4 IV;
+	mat4 IVP;
 	vec4 eye;
 	vec4 nfp;	// near, far, aspect_ratio, hfov
 	ivec4 whnp; // width, height, num_prims
@@ -22,9 +22,6 @@ layout(std140, binding=2) uniform CamBlock
 #define AR nfp.z
 #define FOV nfp.w
 
-float sHFOV = sin(FOV*0.5f);
-float sVFOV = sin(FOV / (AR*2.0f));
-
 uniform vec3 ambient;
 uniform vec3 light_color;
 uniform vec3 light_pos;
@@ -37,11 +34,9 @@ uniform float light_str;
 out vec4 out_color;
 
 vec3 getPos(vec2 uv, float z){
-	uv.x *= z * sHFOV;
-	uv.y *= z * sVFOV;
 	vec4 t = vec4(uv, z, 1.0f);
-	t = IV * t;
-	return vec3(t);
+	t = IVP * t;
+	return vec3(t/t.w);
 }
 
 #define NORMAL
@@ -50,7 +45,7 @@ void main(){
 	vec2 suv = uv * 0.5f + 0.5f;
 	float z = texture(dbuf, suv).r;
 #ifndef DISCARD
-	if(z >= FAR) discard;
+	if(z >= 1.0f) discard;
 #endif
 #ifdef COLOR
 	float mat = texture(dbuf, suv).g;
