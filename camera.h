@@ -53,6 +53,11 @@ public:
 	inline float getFar()const{return m_far;}
 	inline float getFov()const{return m_fov;}
 	inline void setEye(const glm::vec3& eye){m_eye = eye;}
+	inline glm::vec3 getPoint(float x, float y, float z){
+		glm::vec4 t(x, y, z, 1.0f);
+		t = IVP * t;
+		return glm::vec3(t / t.w);
+	}
 	inline void move(const glm::vec3& v){
 		m_eye += v.x * getRight(V) + v.y * getUp(V) - v.z * getForward(V);
 	}

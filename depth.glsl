@@ -22,15 +22,13 @@ layout(std140, binding=2) uniform CamBlock
 #define AR nfp.z
 #define FOV nfp.w
 
-const float invNear = 1.0f/NEAR;
-const float invFar = 1.0f/FAR;
-const float invfmn = invFar - invNear;
-const float expd = 1.0f / invfmn;
+// takes [near, far] and returns [0, 1] distributed as 1/z
 float toExp(float z){
-	return (1.0f/z - invNear) * expd;
+	return (1.0f/z - 1.0f/NEAR) / (1.0f/FAR - 1.0f/NEAR);
 }
+// takes [0,1] distributed as 1/z and returns [near, far]
 float toLin(float f){
-	return 1.0f / (f * invfmn + invNear);
+	return 1.0f / (f * (1.0f/FAR - 1.0f/NEAR) + 1.0f/NEAR);
 }
 
 vec2 iadd(vec2 a, vec2 b){return a + b;}
@@ -210,15 +208,32 @@ vec3 toWorld(vec3 uvt){
 	t = IVP * t;
 	return vec3(t/t.w);
 }
+vec3 toWorld(float x, float y, float z){
+	vec4 t = vec4(x, y, z, 1.0f);
+	t = IVP * t;
+	return vec3(t/t.w);
+}
 
 // convert ndc to interval in world coords
 void toInterval(vec2 u, vec2 v, vec2 t, out vec3 a, out vec3 b){
-	vec3 lo = toWorld(vec3(u.x, v.x, t.x));
-	vec3 hi = toWorld(vec3(u.y, v.y, t.y));
-	vec3 center = 0.5f*(lo+hi);
-	vec3 edge = imax(abs(hi - center), abs(lo - center));
-	a = center - edge;
-	b = center + edge;
+	vec3 l, h;
+	vec3 d = toWorld(u.x, v.x, t.x);
+	l = d; h = d;
+	d = toWorld(u.x, v.x, t.y);
+	l = imin(l, d); h = imax(h, d);
+	d = toWorld(u.x, v.y, t.x);
+	l = imin(l, d); h = imax(h, d);
+	d = toWorld(u.x, v.y, t.y);
+	l = imin(l, d); h = imax(h, d);
+	d = toWorld(u.y, v.x, t.x);
+	l = imin(l, d); h = imax(h, d);
+	d = toWorld(u.y, v.x, t.y);
+	l = imin(l, d); h = imax(h, d);
+	d = toWorld(u.y, v.y, t.x);
+	l = imin(l, d); h = imax(h, d);
+	d = toWorld(u.y, v.y, t.y);
+	l = imin(l, d); h = imax(h, d);
+	a = l; b = h;
 }
 
 vec2 map(vec2 u, vec2 v, vec2 t){
@@ -267,8 +282,8 @@ void getUVs(out vec2 u, out vec2 v, ivec2 cr, int depth){
 
 vec2 subdivide(vec2 t, ivec2 cr, float e){
 	vec2 u, v;
-	int start = 2*MAX_DEPTH / 3;
-	e = e / pow(2.0f, start);
+	int start = 0;//2*MAX_DEPTH / 3;
+	//e = e / pow(2.0f, start);
 	for(int j = start; j < MAX_DEPTH; j++){
 		t.y = 1.0f;
 		getUVs(u, v, cr, j);

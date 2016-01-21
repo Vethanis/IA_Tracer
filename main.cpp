@@ -22,6 +22,13 @@ using namespace glm;
 
 #define NUM_PRIMS 200
 
+vec3 imin(const vec3& a, const vec3& b){
+	return vec3(glm::min(a.x, b.x), glm::min(a.y, b.y), glm::min(a.z, b.z));
+}
+vec3 imax(const vec3& a, const vec3& b){
+	return vec3(glm::max(a.x, b.x), glm::max(a.y, b.y), glm::max(a.z, b.z));
+}
+
 struct CommonParams{
 mat4 IVP;
 vec4 eye;
@@ -42,6 +49,7 @@ ivec4 whnp; // width, height, num_prims, max_depth
 		};
 	void update(Camera& cam){
 		IVP = cam.getIVP();
+		vec3 l, h;
 		eye = vec4(cam.getEye(), 0.0f);
 	}
 };

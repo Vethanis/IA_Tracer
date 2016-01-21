@@ -22,6 +22,15 @@ layout(std140, binding=2) uniform CamBlock
 #define AR nfp.z
 #define FOV nfp.w
 
+// takes [near, far] and returns [0, 1] distributed as 1/z
+float toExp(float z){
+	return (1.0f/z - 1.0f/NEAR) / (1.0f/FAR - 1.0f/NEAR);
+}
+// takes [0,1] distributed as 1/z and returns [near, far]
+float toLin(float f){
+	return 1.0f / (f * (1.0f/FAR - 1.0f/NEAR) + 1.0f/NEAR);
+}
+
 uniform vec3 ambient;
 uniform vec3 light_color;
 uniform vec3 light_pos;
