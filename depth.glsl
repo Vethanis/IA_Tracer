@@ -225,15 +225,14 @@ void toInterval(vec2 u, vec2 v, vec2 t, out vec3 l, out vec3 h){
 vec2 map(vec2 u, vec2 v, vec2 t){
 	vec3 a, b;
 	toInterval(u, v, t, a, b);
-	vec2 c = ix(a, b); vec2 d = iy(a, b); vec2 e = iz(a, b);
 	//return l_scene(c, d, e);
-	return paniq_scene(c, d, e);
+	return paniq_scene(ix(a, b), iy(a, b), iz(a, b));
 	//return isphere(c, d, e, vec3(0.f), 1.f);
 	//return icube(c, d, e, 0.5f);
 }
 
 vec2 strace(vec2 u, vec2 v, vec2 t, float e){
-	const int sz = 16;
+	const int sz = 8;
 	vec2 stack[sz];
 	int end = 0;
 	stack[end] = t;
