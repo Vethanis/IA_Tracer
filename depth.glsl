@@ -239,10 +239,14 @@ void toInterval(vec2 u, vec2 v, vec2 t, out vec3 a, out vec3 b){
 vec2 map(vec2 u, vec2 v, vec2 t){
 	vec3 a, b;
 	toInterval(u, v, t, a, b);
-	//return l_scene(ix(a, b), iy(a, b), iz(a, b));
-	return paniq_scene(ix(a, b), iy(a, b), iz(a, b));
+	return l_scene(ix(a, b), iy(a, b), iz(a, b));
+	//return paniq_scene(ix(a, b), iy(a, b), iz(a, b));
 	//return isphere(c, d, e, vec3(0.f), 1.f);
 	//return icube(c, d, e, 0.5f);
+}
+vec2 map(vec3 a, vec3 b){
+	return l_scene(ix(a, b), iy(a, b), iz(a, b));
+	//return paniq_scene(ix(a, b), iy(a, b), iz(a, b));
 }
 
 vec2 strace(vec2 u, vec2 v, vec2 t, float e){
@@ -294,13 +298,48 @@ vec2 subdivide(vec2 t, ivec2 cr, float e){
 	return t;
 }
 
+vec2 trace(vec3 rd, vec2 t, float e){
+	const int sz = 16;
+	vec2 stack[sz];
+	int end = 0;
+	stack[end] = t;
+	int entries = 1;
+	for(int i = 0; i < 300; i++){
+		vec2 cur = stack[end];
+		end--; if(end < 0) end = sz-1;
+		entries--;
+		vec2 F = map(EYE+rd*cur.x, EYE+rd*cur.y);
+		if(contains(F, 0.0f)){
+			if(maxabs(F) < e*cur.x) return cur;
+			end = (end+1)%sz;
+			stack[end] = ifar(cur);
+			end = (end+1)%sz;
+			stack[end] = inear(cur);
+			entries = min(entries+2, sz);
+			continue;
+		}
+		if(entries < 1) break;
+	}
+	return vec2(FAR);
+}
+
+//#define SUBDIVIDE
+
 void main(){
 	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);  
 	ivec2 size = imageSize(dbuf);
 	if (pix.x >= size.x || pix.y >= size.y) return;
-
+#ifdef SUBDIVIDE
 	vec2 F = subdivide(vec2(0.0f, 1.0f), pix, 0.001f);
 	if(F.y >= 1.0f) return;
 	imageStore(dbuf, pix, vec4(center(F)));
+#else
+	vec2 uv = (vec2(pix) / vec2(size))* 2.0f - 1.0f;
+	vec3 rd = normalize(toWorld(uv.x, uv.y, 1.0f) - EYE);
+	vec2 t = vec2(NEAR, FAR);
+	vec2 F = trace(rd, t, 0.0002f);
+	if(F.x >= FAR) return;
+	imageStore(dbuf, pix, vec4(toExp(center(F))));
+#endif
 }
 

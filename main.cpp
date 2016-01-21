@@ -14,20 +14,8 @@
 
 //#include "test.h"
 
-#include <random>
-#include "time.h"
-
 using namespace std;
 using namespace glm;
-
-#define NUM_PRIMS 200
-
-vec3 imin(const vec3& a, const vec3& b){
-	return vec3(glm::min(a.x, b.x), glm::min(a.y, b.y), glm::min(a.z, b.z));
-}
-vec3 imax(const vec3& a, const vec3& b){
-	return vec3(glm::max(a.x, b.x), glm::max(a.y, b.y), glm::max(a.z, b.z));
-}
 
 struct CommonParams{
 mat4 IVP;
@@ -44,7 +32,6 @@ ivec4 whnp; // width, height, num_prims, max_depth
 				w = w >> 1;
 				md++;
 			}
-			printf("%i\n", md);
 			whnp.w = md;
 		};
 	void update(Camera& cam){
@@ -52,17 +39,6 @@ ivec4 whnp; // width, height, num_prims, max_depth
 		vec3 l, h;
 		eye = vec4(cam.getEye(), 0.0f);
 	}
-};
-
-struct CSGParam{
-vec4 center;
-vec4 dim;
-	CSGParam() : center(vec4(0.0f, 0.0f, 0.0f, -1.0f)), dim(vec4(0.0f, 0.0f, 0.0f, -1.0f)){};
-	CSGParam(const vec3& c, const vec3& d, float type, float mat){
-		center = vec4(c, type); dim = vec4(d, mat);
-	}
-	CSGParam(const CSGParam& other)
-		: center(other.center), dim(other.dim){};
 };
 
 
@@ -87,47 +63,30 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 	
-	srand(time(NULL));
 	Camera camera;
 	const int WIDTH = atoi(argv[1]);
 	const int HEIGHT = atoi(argv[2]);
-	vec2 ddx(2.0f/WIDTH, 0.0f);
-	vec2 ddy(0.0f, 2.0f/HEIGHT);
-	unsigned layoutSize = 8;
-	unsigned callsizeX = WIDTH / layoutSize + ((WIDTH % layoutSize) ? 1 : 0);
-	unsigned callsizeY = HEIGHT / layoutSize + ((HEIGHT % layoutSize) ? 1 : 0);
-	//camera.setEye({0.0f, 0.0f, 2.0f});
-	camera.setEye({0.0f, 2.f, -.5f});
-	camera.pitch(-90.0f);
-	camera.setFov(90.0f);
-	camera.setPlanes(0.1f, 400.0f);
-	//camera.setPlanes(0.1f, 50.0f);
+	const vec2 ddx(2.0f/WIDTH, 0.0f);
+	const vec2 ddy(0.0f, 2.0f/HEIGHT);
+	const unsigned layoutSize = 8;
+	const unsigned callsizeX = WIDTH / layoutSize + ((WIDTH % layoutSize) ? 1 : 0);
+	const unsigned callsizeY = HEIGHT / layoutSize + ((HEIGHT % layoutSize) ? 1 : 0);
+	//camera.setEye({0.0f, 2.f, -.5f});
+	//camera.pitch(-90.0f);
+	//camera.setFov(90.0f);
+	//camera.setPlanes(0.1f, 400.0f);
 	camera.resize(WIDTH, HEIGHT);
 	camera.update();
 	
 	Window window(WIDTH, HEIGHT, 4, 3, "");
 	Input input(window.getWindow());
 	GLScreen screen;
-	//ComputeShader rayProg("rmarch.glsl");
 	ComputeShader depthProg("depth.glsl");
 	ComputeShader clearProg("clear.glsl");
 	GLProgram colorProg("fullscreen.glsl", "color.glsl");
 	Texture dbuf(WIDTH, HEIGHT, FLOAT2);
 	dbuf.setCSBinding(0);
-	/*CSGParam params[NUM_PRIMS];
-	for(int i = 0; i < NUM_PRIMS; i++){
-		float a[6];
-		for(int j = 0; j < 3;j++)
-			a[j] = (rand()%2000 - 1000.0f) / 200.0f;
-		for(int j = 3; j < 6; j++)	// [0,100]
-			a[j] = 0.1f + ((rand()%300) / 100.0f);
-		float t = (float)(rand()%2);
-		float m = (float)i / NUM_PRIMS;
-		params[i] = CSGParam({a[0], a[1], a[2]}, {a[3], a[4], a[5]}, t, m);
-	}
-	SSBO paramssbo(&params[0], sizeof(params), 1);
-	*/
-	CommonParams com_p(camera, WIDTH, HEIGHT, NUM_PRIMS);
+	CommonParams com_p(camera, WIDTH, HEIGHT, 0);
 	UBO camUBO(&com_p, sizeof(com_p), 2);
 	
     vec3 light_pos(5.0f, 5.0f, 5.0f);
