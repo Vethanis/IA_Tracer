@@ -1,12 +1,18 @@
 # octree
-Was an octree, now its IA beam casting
+Was an octree, now it's IA beam casting
 
 Dependencies:
   OpenGL 4.3
   glew
   glfw3
   glm
-  clang / g++
+  clang
   make
+  
+Building:
+	make -j release
 
-![alt tag](https://pbs.twimg.com/media/CY970u4UQAA7E7Z.png:large)
+Running:
+	make run
+
+![alt tag](http://i.imgur.com/UQfzSRx.jpg)
